@@ -631,6 +631,7 @@
   })();
   if ('ontouchstart' in window || location.search.indexOf('touch') >= 0) document.body.classList.add('touch');
   if (location.search.indexOf('drive') >= 0) { state.autoDrive = true; }
+  if (location.search.indexOf('view=high') >= 0) { state.high = true; }
 
   /* ---------------- vehicles ---------------- */
   function toggleVehicle() {
@@ -851,6 +852,7 @@
     camera.position.lerp(camPos, Math.min(1, dt * 7));
     camLook.set(tgt.x + Math.sin(camYaw) * 8, 2.0, tgt.z + Math.cos(camYaw) * 8);
     camera.lookAt(camLook);
+    if (state.high) { camera.position.set(tgt.x + 165, 115, tgt.z + 165); camera.lookAt(tgt.x, 14, tgt.z); }
     sun.position.set(tgt.x - 150, 300, tgt.z + 110);
     sun.target.position.set(tgt.x, 0, tgt.z);
     sun.target.updateMatrixWorld();
@@ -980,16 +982,32 @@
     var n = px.length / 4;
     var d = document.getElementById('dbg');
     if (!d) { d = document.createElement('div'); d.id = 'dbg'; d.style.cssText = 'position:fixed;left:0;bottom:0;z-index:99;color:#0f0;font:11px monospace;background:#000a;padding:3px'; document.body.appendChild(d); }
-    d.textContent = 'LUM=' + Math.round(sum / n) + ' DARK=' + Math.round(100 * dark / n) + '% BRIGHT=' + Math.round(100 * bright / n) + '% FPS=' + lastFps + ' V=' + Math.round(P.x) + ',' + Math.round(P.z);
+    d.textContent = 'LUM=' + Math.round(sum / n) + ' SCENE=' + scene.children.length + ' SIGN=' + signCount + ' LAMP=' + lampList.length + ' DARK=' + Math.round(100 * dark / n) + '% BRIGHT=' + Math.round(100 * bright / n) + '% FPS=' + lastFps + ' V=' + Math.round(P.x) + ',' + Math.round(P.z);
   }
   var lastFps = 0;
   var fpsT = 0, fpsN = 0;
+  var perfT = 0, perfN = 0, perfDone = false;
+  function perfCheck(dt) {
+    if (perfDone) return;
+    perfT += dt; perfN++;
+    if (perfT < 4) return;
+    var fps = perfN / perfT; perfDone = true;
+    if (fps < 26) {
+      if (composer) { composer = null; }
+      renderer.shadowMap.enabled = false;
+      renderer.setPixelRatio(1);
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      if (bloom) bloom.enabled = false;
+      scene.traverse(function (o) { if (o.isMesh) o.castShadow = false; });
+      toast('Qualit\u00e0 ridotta automaticamente per fluidit\u00e0.');
+    }
+  }
   function loop(now) {
     var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now;
     { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
     readPad();
     if (state.autoDrive) { touch.gas = 1; touch.ax = 0.02; }
-    if (state.running && !state.paused) update(dt);
+    if (state.running && !state.paused) { update(dt); perfCheck(dt); }
     if (composer) composer.render(); else renderer.render(scene, camera);
     if (STATS) statsTick();
     requestAnimationFrame(loop);
