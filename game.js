@@ -39,7 +39,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.16;
+  renderer.toneMappingExposure = 1.24;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -74,7 +74,7 @@
   sky.renderOrder = -10; scene.add(sky);
 
   /* luna come luce direzionale fredda, ombre morbide */
-  scene.add(new THREE.HemisphereLight(0x54709c, 0x1d1a24, 0.40));
+  scene.add(new THREE.HemisphereLight(0x5a76a2, 0x3a2a1e, 0.62));
   var sun = new THREE.DirectionalLight(0x9fb4e0, 0.42);
   sun.position.set(-180, 320, 140);
   sun.castShadow = true;
@@ -700,7 +700,7 @@
     var pole = new THREE.InstancedMesh(poleGeo, new THREE.MeshStandardMaterial({ color: 0x111418, roughness: 0.6, metalness: 0.7 }), lampList.length);
     var head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.34, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd9a0 }), lampList.length);
     var halo = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ color: 0xffa04a, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), lampList.length);
-    var pool = new THREE.InstancedMesh(new THREE.CircleGeometry(7.5, 20), new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.17, depthWrite: false, blending: THREE.AdditiveBlending }), lampList.length);
+    var pool = new THREE.InstancedMesh(new THREE.CircleGeometry(9.5, 20), new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: 0.30, depthWrite: false, blending: THREE.AdditiveBlending }), lampList.length);
     for (var i = 0; i < lampList.length; i++) {
       var p = lampList[i];
       dq.identity(); dp.set(p[0], 0, p[1]); ds.set(1, 1, 1); dummyM.compose(dp, dq, ds); pole.setMatrixAt(i, dummyM);
@@ -713,7 +713,7 @@
     /* vere luci puntuali solo nelle vicinanze del giocatore */
     window.__lampLights = [];
     for (var j = 0; j < 14; j++) {
-      var pl = new THREE.PointLight(0xffa24a, 1.5, 36, 1.8); pl.position.set(0, 6.4, 0); scene.add(pl); window.__lampLights.push(pl);
+      var pl = new THREE.PointLight(0xffa24a, 2.8, 52, 1.7); pl.position.set(0, 6.4, 0); scene.add(pl); window.__lampLights.push(pl);
     }
   })();
   function signCanvas(text, color) {
