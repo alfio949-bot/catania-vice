@@ -628,6 +628,7 @@
     zone.addEventListener('mousedown', start); window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
   })();
   if ('ontouchstart' in window || location.search.indexOf('touch') >= 0) document.body.classList.add('touch');
+  if (location.search.indexOf('drive') >= 0) { state.autoDrive = true; }
 
   /* ---------------- vehicles ---------------- */
   function toggleVehicle() {
@@ -985,6 +986,7 @@
     var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now;
     if (location.search.indexOf('fps') >= 0) { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
     readPad();
+    if (state.autoDrive) { touch.gas = 1; touch.ax = 0.02; }
     if (state.running && !state.paused) update(dt);
     if (composer) composer.render(); else renderer.render(scene, camera);
     if (STATS) statsTick();
