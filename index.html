@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Catania Vice 6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--ink:#eaf0f7;--gold:#ffc94d;--hot:#ff5566;--ok:#5ce0a2;--line:rgba(255,255,255,.14)}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#070a0e;color:var(--ink);
+    font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none}
+  #game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  .top{position:absolute;top:0;left:0;right:0;display:flex;gap:8px;align-items:flex-start;padding:12px clamp(10px,3vw,26px);flex-wrap:wrap}
+  .chip{background:rgba(9,13,19,.72);border:1px solid var(--line);border-radius:12px;padding:6px 11px;backdrop-filter:blur(8px);display:flex;flex-direction:column;gap:1px}
+  .chip b{font-family:"Bebas Neue",Impact,sans-serif;font-size:22px;letter-spacing:1.4px;line-height:1}
+  .chip small{font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:#8fa0b6}
+  #cash b{color:var(--ok)} #vStars{color:var(--gold);font-size:19px;letter-spacing:0}
+  .hpwrap{min-width:120px;flex:0 1 190px}
+  #hpbar{height:9px;border-radius:6px;background:rgba(255,255,255,.16);overflow:hidden;margin-top:4px}
+  #hpfill{display:block;height:100%;width:100%;border-radius:6px;background:linear-gradient(90deg,#ff8a5c,#ff5566);transition:width .2s}
+  #mission{position:absolute;left:clamp(10px,3vw,26px);bottom:20px;max-width:min(430px,66vw);
+    background:linear-gradient(180deg,rgba(9,13,19,.88),rgba(9,13,19,.62));border:1px solid var(--line);
+    border-left:3px solid var(--gold);border-radius:12px;padding:10px 13px;backdrop-filter:blur(8px)}
+  #mission b{display:block;font-family:"Bebas Neue",Impact,sans-serif;font-size:20px;letter-spacing:1.3px;color:var(--gold)}
+  #mission span{display:block;font-size:12px;line-height:1.45;color:#c3cfdd;margin-top:2px}
+  #mission em{display:block;font-style:normal;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:#8899ad;margin-top:5px}
+  #mini{position:absolute;right:clamp(10px,3vw,26px);top:70px;width:168px;height:120px;border:1px solid var(--line);
+    border-radius:10px;background:rgba(7,10,14,.8);backdrop-filter:blur(6px)}
+  #toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:9px 16px;border-radius:999px;
+    background:rgba(9,13,19,.9);border:1px solid var(--line);font-size:12.5px;font-weight:600;opacity:0;transition:opacity .3s;text-align:center;max-width:80vw}
+  #touchui{display:none}
+  body.touch #touchui{display:block}
+  body.touch #mission{bottom:150px;max-width:60vw}
+  #stick{position:fixed;left:18px;bottom:22px;width:132px;height:132px;border-radius:50%;
+    background:rgba(10,14,20,.45);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  #knob{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.5)}
+  .btns{position:fixed;right:16px;bottom:22px;display:grid;grid-template-columns:auto auto;gap:10px}
+  .btns button{width:74px;height:74px;border-radius:50%;border:1px solid var(--line);background:rgba(10,14,20,.55);
+    color:#dce6f2;font-weight:800;font-size:11px;letter-spacing:1px;display:flex;align-items:center;justify-content:center}
+  .btns button.act{background:rgba(255,201,77,.3)}
+  #intro{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    background:radial-gradient(circle at 50% 30%,rgba(24,36,52,.96),rgba(5,8,12,.99));text-align:center;padding:24px;z-index:20;transition:opacity .4s}
+  #intro.hide{opacity:0;pointer-events:none}
+  #intro h1{margin:0;font-family:"Bebas Neue",Impact,sans-serif;font-size:clamp(42px,10vw,84px);letter-spacing:3px;line-height:.95;
+    background:linear-gradient(180deg,#fff,#ffc94d);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #intro p{margin:0;max-width:520px;font-size:13px;line-height:1.6;color:#b6c4d4}
+  #intro .keys{font-size:11.5px;color:#8fa0b6;line-height:1.9}
+  #start{pointer-events:auto;margin-top:6px;padding:14px 38px;border-radius:999px;border:0;cursor:pointer;
+    background:linear-gradient(180deg,#ffd35c,#f0a92c);color:#1a1206;font-weight:800;font-size:15px;letter-spacing:2px;font-family:"Bebas Neue",Impact,sans-serif}
+  .tag{font-size:9px;letter-spacing:2.4px;text-transform:uppercase;color:#7d8ea4}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div class="top">
+    <div class="chip" id="cash"><b id="vMoney">0&euro;</b><small>Soldi</small></div>
+    <div class="chip hpwrap"><small>Salute</small><div id="hpbar"><i id="hpfill"></i></div></div>
+    <div class="chip"><b id="vStars">&#9734;&#9734;&#9734;&#9734;&#9734;</b><small>Ricercato</small></div>
+    <div class="chip"><b id="vAmmo">12/60</b><small>Munizioni</small></div>
+    <div class="chip"><b id="vSpeed">&mdash;</b><small>Velocit&agrave;</small></div>
+  </div>
+  <div id="mission"><b id="mTitle">&nbsp;</b><span id="mDesc"></span><em id="mDist"></em></div>
+  <canvas id="mini" width="168" height="120"></canvas>
+  <div id="toast"></div>
+</div>
+
+<div id="touchui">
+  <div id="stick"><div id="knob"></div></div>
+  <div class="btns">
+    <button id="bGas">GAS</button>
+    <button id="bBrake">FRENO</button>
+    <button id="bEnter">AUTO</button>
+    <button id="bFire">SPARA</button>
+  </div>
+</div>
+
+<div id="intro">
+  <div class="tag">Catania &middot; mappa reale OpenStreetMap</div>
+  <h1>CATANIA VICE 6</h1>
+  <p>Tre chilometri e mezzo di Catania vera: Duomo, Pescheria, Porto, Villa Bellini, Via Etnea, Castello Ursino.
+     Sei missioni di mafia, polizia, pistola e soldi.</p>
+  <div class="keys">
+    WASD / frecce muovi &middot; E sali o scendi dall'auto &middot; F spara &middot; R ricarica &middot; Shift corri &middot; M cambia missione &middot; Esc pausa<br />
+    Controller: stick sinistro guida, RT accelera, LT frena, A scendi/sali, X spara
+  </div>
+  <button id="start">GIOCA</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/alfio949-bot/catania-vice@main/map-data.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/alfio949-bot/catania-vice@main/game.js"></script>
+</body>
+</html>
