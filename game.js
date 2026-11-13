@@ -39,7 +39,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.24;
+  renderer.toneMappingExposure = 1.18;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -74,7 +74,7 @@
   sky.renderOrder = -10; scene.add(sky);
 
   /* luna come luce direzionale fredda, ombre morbide */
-  scene.add(new THREE.HemisphereLight(0x5a76a2, 0x3a2a1e, 0.62));
+  scene.add(new THREE.HemisphereLight(0x6b7080, 0x3a2a1e, 0.58));
   var sun = new THREE.DirectionalLight(0x9fb4e0, 0.42);
   sun.position.set(-180, 320, 140);
   sun.castShadow = true;
@@ -84,7 +84,7 @@
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.5;
   scene.add(sun); scene.add(sun.target);
   var fill = new THREE.DirectionalLight(0xffa860, 0.22); fill.position.set(120, 80, -180); scene.add(fill);
-  var fill2 = new THREE.DirectionalLight(0x5f8cdd, 0.16); fill2.position.set(-160, 60, -60); scene.add(fill2);
+  var fill2 = new THREE.DirectionalLight(0x587099, 0.09); fill2.position.set(-160, 60, -60); scene.add(fill2);
 
   /* ---- Etna in eruzione ---- */
   var ETNA = { x: 740, z: -2350 };
@@ -167,10 +167,14 @@
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
+  /* Palette misurata su 12 foto reali di Catania (Wikimedia, CC):
+     intonaco grigio-caldo, pietra bianca di Siracusa, basalto lavico. */
   var STYLES = [
-    { base: '#a18d6c', trim: '#bcae8e', shut: '#33493a', warm: '#ffbe6a', iron: '#171a1c' },
-    { base: '#9c8168', trim: '#b9a487', shut: '#4a3826', warm: '#ffc27e', iron: '#191613' },
-    { base: '#9a958a', trim: '#b8b4a9', shut: '#27404f', warm: '#ffd49b', iron: '#161a1c' }
+    { base: '#b7a99d', trim: '#d8cec2', shut: '#3a4a3f', warm: '#ffbe6a', iron: '#171a1c' },
+    { base: '#a2938a', trim: '#cfc4b8', shut: '#4a3a2c', warm: '#ffc27e', iron: '#191613' },
+    { base: '#c8bfb2', trim: '#e2dad0', shut: '#2c424f', warm: '#ffd49b', iron: '#161a1c' },
+    { base: '#8d8078', trim: '#b5a89c', shut: '#33413a', warm: '#ffb765', iron: '#14171a' },
+    { base: '#c3a982', trim: '#e0cbaa', shut: '#4a3d2a', warm: '#ffc684', iron: '#1a1714' }
   ];
   function makeFacadeTile(st, seed) {
     var S = 1024, c = mkCanvas(S, S), x = c.getContext('2d');
@@ -257,13 +261,13 @@
     var ec = mkCanvas(W, H), ex = ec.getContext('2d');
     var r = mulberry(seed);
     ex.fillStyle = '#000'; ex.fillRect(0, 0, W, H);
-    x.fillStyle = '#9b9080'; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#a8998c'; x.fillRect(0, 0, W, H);
     for (var i = 0; i < 400; i++) {
       x.fillStyle = 'rgba(' + (r() < 0.5 ? '255,250,240,' : '52,40,28,') + (0.02 + r() * 0.05) + ')';
       x.fillRect(r() * W, r() * H, 6 + r() * 40, 4 + r() * 26);
     }
     /* basamento in pietra lavica, il nero di Catania */
-    x.fillStyle = '#1b1e24'; x.fillRect(0, H - 66, W, 66);
+    x.fillStyle = '#26262a'; x.fillRect(0, H - 66, W, 66);
     for (var j = 0; j < 420; j++) {
       x.fillStyle = 'rgba(' + (r() < 0.4 ? '255,255,255,' : '0,0,0,') + (0.02 + r() * 0.07) + ')';
       x.fillRect(r() * W, H - 66 + r() * 66, 4 + r() * 18, 3 + r() * 7);
@@ -303,11 +307,11 @@
     return { map: c, emissive: ec };
   }
   var FAC_TILES = [], SHOP_TILES = [];
-  for (var ft = 0; ft < 3; ft++) { FAC_TILES.push(makeFacadeTile(STYLES[ft], 1301 + ft * 977)); }
+  for (var ft = 0; ft < STYLES.length; ft++) { FAC_TILES.push(makeFacadeTile(STYLES[ft], 1301 + ft * 977)); }
   for (var st2 = 0; st2 < 2; st2++) { SHOP_TILES.push(makeShopTile(4409 + st2 * 613)); }
   function makeWallMaterial(fi, si) {
     var fac = FAC_TILES[fi], shp = SHOP_TILES[si];
-    var m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0.03 });
+    var m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0.03, envMapIntensity: 0.35 });
     m.userData.u = {
       uFac: { value: mkTex(fac.map, 1, 1) },
       uFacE: { value: mkTex(fac.emissive, 1, 1) },
@@ -657,7 +661,7 @@
   var wallMatsByBucket = [];
   (function () {
     var MATS = [];
-    for (var fi = 0; fi < 3; fi++) for (var si = 0; si < 2; si++) MATS.push(makeWallMaterial(fi, si));
+    for (var fi = 0; fi < 5; fi++) for (var si = 0; si < 2; si++) MATS.push(makeWallMaterial(fi, si % SHOP_TILES.length));
     for (var b = 0; b < 3; b++) {
       var arr = [];
       for (var m2 = 0; m2 < 3; m2++) arr.push(MATS[(b * 3 + m2) % MATS.length]);
