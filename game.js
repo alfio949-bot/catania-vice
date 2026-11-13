@@ -39,7 +39,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.45;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -59,7 +59,7 @@
       'float h(vec2 s){ return fract(sin(dot(s, vec2(12.9898,78.233)))*43758.5453); }',
       'void main(){',
       ' float y = clamp(p.y,0.0,1.0);',
-      ' vec3 top = vec3(0.012,0.02,0.055); vec3 hor = vec3(0.10,0.07,0.13);',
+      ' vec3 top = vec3(0.025,0.045,0.11); vec3 hor = vec3(0.22,0.15,0.26);',
       ' vec3 c = mix(hor, top, pow(y,0.55));',
       ' vec2 sp = floor(vec2(atan(p.x,p.z)*220.0, p.y*220.0));',
       ' float st = step(0.9965, h(sp)) * smoothstep(0.08,0.4,p.y) * (0.5+0.5*sin(t*2.0+h(sp)*40.0));',
@@ -74,8 +74,8 @@
   sky.renderOrder = -10; scene.add(sky);
 
   /* luna come luce direzionale fredda, ombre morbide */
-  scene.add(new THREE.HemisphereLight(0x3b4a7a, 0x1b1420, 0.55));
-  var sun = new THREE.DirectionalLight(0x8fa6d8, 0.85);
+  scene.add(new THREE.HemisphereLight(0x6f86c4, 0x2a2130, 1.25));
+  var sun = new THREE.DirectionalLight(0xa8bce8, 1.15);
   sun.position.set(-180, 320, 140);
   sun.castShadow = true;
   sun.shadow.mapSize.set(QUALITY === 3 ? 4096 : 2048, QUALITY === 3 ? 4096 : 2048);
@@ -83,6 +83,8 @@
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 900;
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.5;
   scene.add(sun); scene.add(sun.target);
+  var fill = new THREE.DirectionalLight(0xffb070, 0.55); fill.position.set(120, 80, -180); scene.add(fill);
+  var fill2 = new THREE.DirectionalLight(0x6f9cff, 0.45); fill2.position.set(-160, 60, -60); scene.add(fill2);
 
   /* ---- Etna in eruzione ---- */
   var ETNA = { x: 740, z: -2350 };
@@ -198,7 +200,7 @@
   /* ---- terreno ---- */
   var gC = mkCanvas(256, 256), gx = gC.getContext('2d'); gx.fillStyle = '#181a1c'; gx.fillRect(0, 0, 256, 256); grain(gx, 256, 256, 5000, 0.12);
   var gTex = mkTex(gC, 500, 500);
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: gTex, color: 0x70727a, roughness: 0.95 }));
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: gTex, color: 0x8a8c96, roughness: 0.9 }));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.06; ground.receiveShadow = true; scene.add(ground);
 
   /* ---- strade: asfalto bagnato riflettente, marciapiedi, strisce ---- */
@@ -245,7 +247,7 @@
   }
   var wetTex = mkTex(asphaltCanvas(), 1, 1), wetRough = mkTex(roughCanvas(), 1, 1, false);
   lineMesh(walkPos, new THREE.MeshStandardMaterial({ color: 0x4a4a52, roughness: 0.55, metalness: 0.1 }));
-  lineMesh(roadPos, new THREE.MeshStandardMaterial({ map: wetTex, roughnessMap: wetRough, color: 0xb0b0b8, roughness: 0.32, metalness: 0.55, side: THREE.DoubleSide, envMapIntensity: 1.4 }));
+  lineMesh(roadPos, new THREE.MeshStandardMaterial({ map: wetTex, roughnessMap: wetRough, color: 0x8f9098, roughness: 0.28, metalness: 0.55, side: THREE.DoubleSide, envMapIntensity: 1.4 }));
   lineMesh(markPos, new THREE.MeshBasicMaterial({ color: 0xd8d6c8 }));
 
   /* ---- parchi / acqua ---- */
@@ -259,7 +261,7 @@
   }
   for (var li2 = 0; li2 < LINES.length; li2++) {
     var LL = LINES[li2];
-    if (LL.c === 13) fillPoly(LL.p, 0x1e3a24, 0.04, 0.95);
+    if (LL.c === 13) fillPoly(LL.p, 0x2b4a30, 0.04, 0.95);
     else if (LL.c === 14) fillPoly(LL.p, 0x0d2233, 0.02, 0.08, 0.7);
   }
 
@@ -322,7 +324,7 @@
   }
 
   /* ---- palazzi: facciate con finestre accese ---- */
-  var bases = ['#4a4038', '#3d3630', '#554a40', '#42383a', '#4f463c', '#38322e'];
+  var bases = ['#6e6152', '#5e5346', '#7a6b58', '#655a52', '#726457', '#564c42'];
   var wallMatsByBucket = [];
   (function () {
     var dims = [[4, 7], [5, 9], [6, 12]];
@@ -331,7 +333,7 @@
       for (var m = 0; m < 3; m++) {
         var fc = facadeCanvas(bases[(b * 2 + m) % bases.length], dims[b][0], dims[b][1], b * 7 + m);
         var em = emissiveFromFacade(fc);
-        arr.push(new THREE.MeshStandardMaterial({ map: mkTex(fc, 1, 1), emissiveMap: mkTex(em, 1, 1), emissive: 0xffffff, emissiveIntensity: 1.35, roughness: 0.85, metalness: 0.02 }));
+        arr.push(new THREE.MeshStandardMaterial({ map: mkTex(fc, 1, 1), emissiveMap: mkTex(em, 1, 1), emissive: 0xffffff, emissiveIntensity: 2.4, roughness: 0.85, metalness: 0.02 }));
       }
       wallMatsByBucket.push(arr);
     }
@@ -460,7 +462,7 @@
     composer = new THREE.EffectComposer(renderer);
     composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY === 3 ? 2 : 1.5));
     composer.addPass(new THREE.RenderPass(scene, camera));
-    bloom = new THREE.UnrealBloomPass(rtSize, 0.95, 0.85, 0.62);
+    bloom = new THREE.UnrealBloomPass(rtSize, 1.1, 0.9, 0.72);
     composer.addPass(bloom);
     composer.setSize(window.innerWidth, window.innerHeight);
   }
@@ -984,7 +986,7 @@
   var fpsT = 0, fpsN = 0;
   function loop(now) {
     var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now;
-    if (location.search.indexOf('fps') >= 0) { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
+    { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
     readPad();
     if (state.autoDrive) { touch.gas = 1; touch.ax = 0.02; }
     if (state.running && !state.paused) update(dt);
