@@ -82,17 +82,25 @@
 <div id="intro">
   <div class="tag">Catania &middot; mappa reale OpenStreetMap</div>
   <h1>CATANIA VICE 6</h1>
-  <p>Tre chilometri e mezzo di Catania vera: Duomo, Pescheria, Porto, Villa Bellini, Via Etnea, Castello Ursino.
+  <p>Tre chilometri e mezzo di Catania vera, di notte, con l'Etna che erutta: Duomo, Pescheria, Porto, Villa Bellini, Via Etnea, Castello Ursino.
      Sei missioni di mafia, polizia, pistola e soldi.</p>
   <div class="keys">
     WASD / frecce muovi &middot; E sali o scendi dall'auto &middot; F spara &middot; R ricarica &middot; Shift corri &middot; M cambia missione &middot; Esc pausa<br />
     Controller: stick sinistro guida, RT accelera, LT frena, A scendi/sali, X spara
   </div>
   <button id="start">GIOCA</button>
+  <div class="keys" style="margin-top:2px">Qualit&agrave;: <a href="?q=1" style="color:#ffc94d">bassa</a> &middot; <a href="?q=2" style="color:#ffc94d">media</a> &middot; <a href="?q=3" style="color:#ffc94d">alta / 4K</a></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/alfio949-bot/catania-vice@main/map-data.js?v=3"></script>
-<script src="https://cdn.jsdelivr.net/gh/alfio949-bot/catania-vice@main/game.js?v=3"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="map-data.js?v=4"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>
