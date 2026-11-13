@@ -37,7 +37,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   if ('outputEncoding' in renderer) renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 0.98;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -56,7 +56,7 @@
   scene.add(sky);
 
   var hemi = new THREE.HemisphereLight(0xcfe1f2, 0x6a6155, 0.75); scene.add(hemi);
-  var sun = new THREE.DirectionalLight(0xfff0d8, 2.3);
+  var sun = new THREE.DirectionalLight(0xfff1da, 1.7);
   sun.position.set(200, 300, 140);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -66,7 +66,7 @@
   sun.shadow.bias = -0.0006;
   sun.shadow.normalBias = 0.6;
   scene.add(sun); scene.add(sun.target);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.16));
 
   /* ---- procedural textures ---- */
   function mkCanvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
@@ -132,7 +132,7 @@
 
   /* ---- ground ---- */
   var gTex = mkTex(groundCanvas(), 420, 420);
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: gTex, color: 0xb6b0a6, roughness: 0.98, metalness: 0 }));
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: gTex, color: 0x8f8a80, roughness: 0.98, metalness: 0 }));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.06; ground.receiveShadow = true; scene.add(ground);
 
   /* ---- roads: sidewalks + asphalt + markings ---- */
