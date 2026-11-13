@@ -39,7 +39,7 @@
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.45;
+  renderer.toneMappingExposure = 1.22;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -74,11 +74,11 @@
   sky.renderOrder = -10; scene.add(sky);
 
   /* luna come luce direzionale fredda, ombre morbide */
-  scene.add(new THREE.HemisphereLight(0x6f86c4, 0x2a2130, 1.25));
-  var sun = new THREE.DirectionalLight(0xa8bce8, 1.15);
+  scene.add(new THREE.HemisphereLight(0x6f86c4, 0x2a2130, 0.95));
+  var sun = new THREE.DirectionalLight(0xa8bce8, 0.95);
   sun.position.set(-180, 320, 140);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(QUALITY === 3 ? 4096 : 2048, QUALITY === 3 ? 4096 : 2048);
+  sun.shadow.mapSize.set(QUALITY === 3 ? 3072 : 1024, QUALITY === 3 ? 3072 : 1024);
   sun.shadow.camera.left = -140; sun.shadow.camera.right = 140; sun.shadow.camera.top = 140; sun.shadow.camera.bottom = -140;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 900;
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.5;
@@ -462,7 +462,7 @@
     composer = new THREE.EffectComposer(renderer);
     composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY === 3 ? 2 : 1.5));
     composer.addPass(new THREE.RenderPass(scene, camera));
-    bloom = new THREE.UnrealBloomPass(rtSize, 1.1, 0.9, 0.72);
+    bloom = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2), 0.9, 0.75, 0.68);
     composer.addPass(bloom);
     composer.setSize(window.innerWidth, window.innerHeight);
   }
