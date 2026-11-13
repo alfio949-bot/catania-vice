@@ -1,0 +1,36 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>CV debug map</title>
+<style>html,body{margin:0;height:100%;background:#0b1016;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script src="map-data.js"></script>
+<script>
+var cv=document.getElementById('c');
+var r=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+r.setSize(window.innerWidth,window.innerHeight,false);
+var sc=new THREE.Scene(); sc.background=new THREE.Color(0x101820);
+var cam=new THREE.OrthographicCamera(-1800,1800,1800,-1800,1,5000);
+cam.position.set(0,1000,0); cam.up.set(0,0,-1); cam.lookAt(0,0,0);
+sc.add(new THREE.AmbientLight(0xffffff,1));
+function buf(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer;}
+var bb=buf(CAT_MAP.b),bv=new DataView(bb),NB=(bb.byteLength/7)|0;
+var geo=new THREE.BoxGeometry(1,1,1);
+var im=new THREE.InstancedMesh(geo,new THREE.MeshLambertMaterial({color:0x9aa4ae}),NB);
+var m4=new THREE.Matrix4(),q=new THREE.Quaternion(),up=new THREE.Vector3(0,1,0),p=new THREE.Vector3(),s=new THREE.Vector3();
+for(var i=0;i<NB;i++){var o=i*7,w=bv.getUint8(o+4),h=bv.getUint8(o+5),a=bv.getUint8(o+6)/256*Math.PI*2-Math.PI;
+ q.setFromAxisAngle(up,-a);p.set(bv.getInt16(o,true),30,bv.getInt16(o+2,true));s.set(w,60,h);m4.compose(p,q,s);im.setMatrixAt(i,m4);}
+im.instanceMatrix.needsUpdate=true; sc.add(im);
+var lb=buf(CAT_MAP.l),lv=new DataView(lb),o2=0,pos=[],cl=[];
+while(o2<lb.byteLength){var cnt=lv.getUint8(o2),cls=lv.getUint8(o2+1),px=lv.getInt16(o2+2,true),pz=lv.getInt16(o2+4,true);o2+=6;
+ var pts=[[px*3,pz*3]];for(var j=1;j<cnt;j++){px+=lv.getInt8(o2);pz+=lv.getInt8(o2+1);o2+=2;pts.push([px*3,pz*3]);}
+ if(cls>=13)continue;var wd=[17,16,14,12,11,9,8,7,6,10,10,10,5,0,0,2][cls]||6;
+ for(var k=0;k<pts.length-1;k++){var A=pts[k],B=pts[k+1],dx=B[0]-A[0],dz=B[1]-A[1],l=Math.hypot(dx,dz);if(l<0.01)continue;
+  var nx=-dz/l*wd/2,nz=dx/l*wd/2;
+  pos.push(A[0]+nx,50,A[1]+nz, A[0]-nx,50,A[1]-nz, B[0]-nx,50,B[1]-nz, A[0]+nx,50,A[1]+nz, B[0]-nx,50,B[1]-nz, B[0]+nx,50,B[1]+nz);
+  var c=cls<=4?[1,.85,.3]:[.55,.85,.95];for(var q2=0;q2<6;q2++)cl.push(c[0],c[1],c[2]);}}
+var g2=new THREE.BufferGeometry();
+g2.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+g2.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));
+sc.add(new THREE.Mesh(g2,new THREE.MeshBasicMaterial({vertexColors:true})));
+r.render(sc,cam);
+document.title='rendered '+NB+' b '+pos.length;
+</script></body></html>
