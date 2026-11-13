@@ -101,6 +101,10 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/MaskPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script src="map-data.js?v=4"></script>
-<script src="game.js?v=4"></script>
+<script>
+window.__errs=[];
+window.addEventListener('error', function(e){ window.__errs.push((e.message||'')+' @'+(e.lineno||0)); var d=document.getElementById('err'); if(!d){d=document.createElement('div');d.id='err';d.style.cssText='position:fixed;left:0;top:0;z-index:999;background:#600;color:#fff;font:12px monospace;padding:6px;max-width:100%;white-space:pre-wrap';document.body.appendChild(d);} d.textContent='ERR: '+window.__errs.slice(-3).join(' | '); });
+document.write('<script src="game.js?v='+Date.now()+'"><\/script>');
+</script>
 </body>
 </html>
