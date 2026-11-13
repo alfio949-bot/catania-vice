@@ -817,13 +817,33 @@
   }
   window.addEventListener('resize', onResize);
   var last = 0;
+  var STATS = location.search.indexOf('stats') >= 0;
+  var statT = 0;
+  function statsTick() {
+    var gl = renderer.getContext();
+    var W = 240, H = 160;
+    var bw = gl.drawingBufferWidth, bh = gl.drawingBufferHeight;
+    var px = new Uint8Array(W * H * 4);
+    gl.readPixels(Math.max(0, (bw - W) >> 1), Math.max(0, (bh - H) >> 1), W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    var sum = 0, dark = 0, bright = 0;
+    for (var i = 0; i < px.length; i += 4) {
+      var lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      sum += lum; if (lum < 80) dark++; if (lum > 205) bright++;
+    }
+    var n = px.length / 4;
+    var d = document.getElementById('dbg');
+    if (!d) { d = document.createElement('div'); d.id = 'dbg'; d.style.cssText = 'position:fixed;left:0;bottom:0;z-index:99;color:#0f0;font:11px monospace;background:#000a;padding:3px'; document.body.appendChild(d); }
+    d.textContent = 'LUM=' + Math.round(sum / n) + ' DARK=' + Math.round(100 * dark / n) + '% BRIGHT=' + Math.round(100 * bright / n) + '% FPS=' + lastFps + ' V=' + Math.round(P.x) + ',' + Math.round(P.z);
+  }
+  var lastFps = 0;
   var fpsT = 0, fpsN = 0;
   function loop(now) {
     var dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016; last = now;
-    if (location.search.indexOf('fps') >= 0) { fpsT += dt; fpsN++; if (fpsT > 1) { document.title = 'FPS ' + Math.round(fpsN / fpsT); fpsT = 0; fpsN = 0; } }
+    if (location.search.indexOf('fps') >= 0) { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
     readPad();
     if (state.running && !state.paused) update(dt);
     renderer.render(scene, camera);
+    if (STATS) statsTick();
     requestAnimationFrame(loop);
   }
   camera.position.set(P.x - Math.sin(P.ang) * 8, 4, P.z - Math.cos(P.ang) * 8);
