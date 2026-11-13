@@ -513,6 +513,146 @@
   }
 
   /* ---- palazzi: facciate con finestre accese ---- */
+  /* ================= DETTAGLI 3D: balconi, cornicioni, tetti =================
+     Le facciate restano piatte solo in lontananza. Entro 175 m dal giocatore
+     ogni palazzo riceve balconi aggettanti, cornicione e roba sui tetti:
+     sono i volumi che rompono l'effetto "scatola". */
+  var DET_R = 175, DET_CAP = 30000, DET_GEN = 0;
+  var detStamp = new Int32Array(NB);
+  var detSlab = null, detRail = null, detCorn = null, detClut = null;
+  var detLastX = 1e9, detLastZ = 1e9, detTimer = 0;
+  var UPY = new THREE.Vector3(0, 1, 0);
+  (function () {
+    var rc = mkCanvas(64, 64), rx = rc.getContext('2d');
+    rx.clearRect(0, 0, 64, 64);
+    rx.fillStyle = '#191b1e';
+    rx.fillRect(0, 0, 64, 7);
+    rx.fillRect(0, 58, 64, 6);
+    for (var i = 4; i < 64; i += 9) rx.fillRect(i, 0, 3, 64);
+    var railTex = new THREE.CanvasTexture(rc);
+    railTex.wrapS = railTex.wrapT = THREE.RepeatWrapping;
+    railTex.anisotropy = 4;
+    var g1 = new THREE.BoxGeometry(1, 1, 1);
+    var slabMat = new THREE.MeshStandardMaterial({ color: 0x9c9484, roughness: 0.9, metalness: 0.02 });
+    var railMat = new THREE.MeshStandardMaterial({ map: railTex, color: 0x3a3d42, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.45, metalness: 0.65 });
+    var cornMat = new THREE.MeshStandardMaterial({ color: 0xa89c86, roughness: 0.93, metalness: 0.02 });
+    var clutMat = new THREE.MeshStandardMaterial({ color: 0x565b60, roughness: 0.82, metalness: 0.15 });
+    detSlab = new THREE.InstancedMesh(g1, slabMat, DET_CAP);
+    detRail = new THREE.InstancedMesh(g1, railMat, DET_CAP);
+    detCorn = new THREE.InstancedMesh(g1, cornMat, 6000);
+    detClut = new THREE.InstancedMesh(g1, clutMat, 8000);
+    detSlab.castShadow = false; detSlab.receiveShadow = true;
+    detRail.castShadow = false; detRail.receiveShadow = true;
+    detCorn.castShadow = true; detCorn.receiveShadow = true;
+    detClut.castShadow = true; detClut.receiveShadow = true;
+    detSlab.frustumCulled = false; detRail.frustumCulled = false;
+    detCorn.frustumCulled = false; detClut.frustumCulled = false;
+    detSlab.count = 0; detRail.count = 0; detCorn.count = 0; detClut.count = 0;
+    scene.add(detSlab); scene.add(detRail); scene.add(detCorn); scene.add(detClut);
+  })();
+  var _m4 = new THREE.Matrix4(), _q1 = new THREE.Quaternion(), _p1 = new THREE.Vector3(), _s1 = new THREE.Vector3();
+  function rebuildDetail(px, pz) {
+    DET_GEN++;
+    var gen = DET_GEN, nS = 0, nR = 0, nC = 0, nK = 0;
+    var cx0 = Math.floor((px - DET_R) / CELL), cx1 = Math.floor((px + DET_R) / CELL);
+    var cz0 = Math.floor((pz - DET_R) / CELL), cz1 = Math.floor((pz + DET_R) / CELL);
+    for (var cx = cx0; cx <= cx1; cx++) for (var cz = cz0; cz <= cz1; cz++) {
+      var arr = grid.get(gkey(cx, cz));
+      if (!arr) continue;
+      for (var i = 0; i < arr.length; i++) {
+        var bi = arr[i];
+        if (detStamp[bi] === gen) continue;
+        detStamp[bi] = gen;
+        var B = BLD[bi];
+        var dx = B.x - px, dz = B.z - pz;
+        if (dx * dx + dz * dz > DET_R * DET_R) continue;
+        if (B.w < 5 || B.h < 5 || B.hh < 5) continue;
+        var ca = Math.cos(B.a), sa = Math.sin(B.a);
+        _q1.setFromAxisAngle(UPY, -B.a);
+        var ax = B.w, az = B.h;
+        var floors = Math.floor(B.hh / 3.2);
+        var alongX = ax >= az;
+        var span = alongX ? ax : az;
+        var dep = alongX ? az : ax;
+        if (nC < 6000) {
+          _p1.set(B.x, B.hh + 0.2, B.z);
+          _s1.set(ax + 0.8, 0.42, az + 0.8);
+          _m4.compose(_p1, _q1, _s1); detCorn.setMatrixAt(nC++, _m4);
+        }
+        var nk = 2 + (bi % 3);
+        for (var k = 0; k < nk && nK < 8000; k++) {
+          var r1 = ((bi * 37 + k * 91) % 100) / 100, r2 = ((bi * 53 + k * 17) % 100) / 100, r3 = ((bi * 29 + k * 71) % 100) / 100;
+          var lx = (r1 - 0.5) * (ax - 2.4), lz = (r2 - 0.5) * (az - 2.4);
+          var hgt = 0.5 + r3 * 1.9;
+          var wx = B.x + lx * ca - lz * sa, wz = B.z + lx * sa + lz * ca;
+          _p1.set(wx, B.hh + 0.4 + hgt * 0.5, wz);
+          _s1.set(0.8 + r1 * 1.6, hgt, 0.8 + r2 * 1.6);
+          _m4.compose(_p1, _q1, _s1); detClut.setMatrixAt(nK++, _m4);
+        }
+        for (var f = 1; f < floors; f++) {
+          var y = f * 3.2;
+          for (var s = 0; s < 2; s++) {
+            var sg = s === 0 ? 1 : -1;
+            if (nS >= DET_CAP) break;
+            var ox, oz, sxs, szs, rx2, rz2, rxs, rzs;
+            if (alongX) {
+              ox = 0; oz = sg * (dep / 2 + 0.45);
+              sxs = span * 0.94; szs = 0.9;
+              rx2 = 0; rz2 = sg * (dep / 2 + 0.88);
+              rxs = span * 0.94; rzs = 0.07;
+            } else {
+              ox = sg * (dep / 2 + 0.45); oz = 0;
+              sxs = 0.9; szs = span * 0.94;
+              rx2 = sg * (dep / 2 + 0.88); rz2 = 0;
+              rxs = 0.07; rzs = span * 0.94;
+            }
+            _p1.set(B.x + ox * ca - oz * sa, y, B.z + ox * sa + oz * ca);
+            _s1.set(sxs, 0.16, szs);
+            _m4.compose(_p1, _q1, _s1); detSlab.setMatrixAt(nS++, _m4);
+            if (nR < DET_CAP) {
+              _p1.set(B.x + rx2 * ca - rz2 * sa, y + 0.58, B.z + rx2 * sa + rz2 * ca);
+              _s1.set(rxs, 1.05, rzs);
+              _m4.compose(_p1, _q1, _s1); detRail.setMatrixAt(nR++, _m4);
+            }
+          }
+        }
+      }
+    }
+    detSlab.count = nS; detRail.count = nR; detCorn.count = nC; detClut.count = nK;
+    detSlab.instanceMatrix.needsUpdate = true; detRail.instanceMatrix.needsUpdate = true;
+    detCorn.instanceMatrix.needsUpdate = true; detClut.instanceMatrix.needsUpdate = true;
+    detLastX = px; detLastZ = pz;
+  }
+  function updateDetail(dt, px, pz) {
+    detTimer -= dt;
+    if (detTimer > 0) return;
+    var dx = px - detLastX, dz = pz - detLastZ;
+    if (dx * dx + dz * dz < 26 * 26) return;
+    detTimer = 0.5;
+    rebuildDetail(px, pz);
+  }
+  /* sagoma vera dell'auto, estrusa: niente piu' scatole impilate */
+  function carBodyGeo() {
+    var sh = new THREE.Shape();
+    sh.moveTo(0.05, 0.34);
+    sh.lineTo(0.02, 0.62);
+    sh.lineTo(0.30, 0.74);
+    sh.lineTo(1.02, 0.88);
+    sh.lineTo(1.52, 1.32);
+    sh.lineTo(2.86, 1.36);
+    sh.lineTo(3.38, 0.94);
+    sh.lineTo(3.86, 0.82);
+    sh.lineTo(4.02, 0.56);
+    sh.lineTo(4.00, 0.34);
+    sh.closePath();
+    var g = new THREE.ExtrudeGeometry(sh, { depth: 1.86, bevelEnabled: false, curveSegments: 6 });
+    g.translate(0, 0, -0.93);
+    g.rotateY(Math.PI / 2);
+    g.translate(0, 0, 2.03);
+    g.computeVertexNormals();
+    return g;
+  }
+
   /* ---- palazzi: facciate reali mappate in spazio mondo ---- */
   var wallMatsByBucket = [];
   (function () {
@@ -658,14 +798,10 @@
     var g = new THREE.Group();
     var paint = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.32, metalness: 0.55 });
     var glass = new THREE.MeshStandardMaterial({ color: 0x101820, roughness: 0.12, metalness: 0.7 });
-    var lower = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.56, 4.35), paint);
-    lower.position.y = 0.62; lower.castShadow = true; g.add(lower);
-    var mid = new THREE.Mesh(new THREE.BoxGeometry(1.86, 0.34, 4.05), paint);
-    mid.position.y = 0.95; mid.castShadow = true; g.add(mid);
-    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.62, 2.25), glass);
-    cabin.position.set(0, 1.34, -0.12); cabin.castShadow = true; g.add(cabin);
-    var roofpl = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.9), paint);
-    roofpl.position.set(0, 1.66, -0.16); g.add(roofpl);
+    var shell = new THREE.Mesh(carBodyGeo(), paint);
+    shell.castShadow = true; shell.receiveShadow = true; g.add(shell);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.36, 1.44), glass);
+    cabin.position.set(0, 1.205, -0.12); g.add(cabin);
     var wg = new THREE.CylinderGeometry(0.37, 0.37, 0.26, 14);
     var wm = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.9 });
     var rim = new THREE.CylinderGeometry(0.2, 0.2, 0.28, 10);
@@ -791,10 +927,7 @@
       return best;
     }
     var N = 38;
-    var chassis = new THREE.BoxGeometry(1.86, 0.62, 4.2); chassis.translate(0, 0.66, 0);
-    var cabin = new THREE.BoxGeometry(1.66, 0.58, 2.05); cabin.translate(0, 1.19, -0.18);
-    var hood = new THREE.BoxGeometry(1.7, 0.3, 1.1); hood.translate(0, 0.98, 1.5);
-    var bodyGeo = mergeGeos([chassis, cabin, hood]);
+    var bodyGeo = carBodyGeo();
     var wg = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 10); wg.rotateZ(Math.PI / 2);
     var wp = [];
     [[-0.9, 1.3], [0.9, 1.3], [-0.9, -1.34], [0.9, -1.34]].forEach(function (p) {
@@ -1247,6 +1380,7 @@
 
     pMesh.visible = P.onFoot;
     updateTraffic(dt);
+    updateDetail(dt, camera.position.x, camera.position.z);
     updatePeds(dt, skyMat.uniforms.t.value);
     checkMission();
     if (state.msgT > 0) state.msgT -= dt;
