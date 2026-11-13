@@ -627,7 +627,7 @@
     zone.addEventListener('touchend', end); zone.addEventListener('touchcancel', end);
     zone.addEventListener('mousedown', start); window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
   })();
-  if ('ontouchstart' in window) document.body.classList.add('touch');
+  if ('ontouchstart' in window || location.search.indexOf('touch') >= 0) document.body.classList.add('touch');
 
   /* ---------------- vehicles ---------------- */
   function toggleVehicle() {
