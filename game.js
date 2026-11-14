@@ -1155,15 +1155,15 @@
     out.setIndex(idx); return out;
   }
   var CAR_MODELS = [
-    { n: 'Fiat Panda',      L: 3.65, W: 1.64, H: 1.55, hb: 0.32, hood: 0.84, trunkH: 0.80, windF: 0.60, roofF: 0.67, roofR: 0.29, trunkF: 0.06 },
-    { n: 'Fiat 500',        L: 3.55, W: 1.63, H: 1.49, hb: 0.30, hood: 0.80, trunkH: 0.74, windF: 0.62, roofF: 0.71, roofR: 0.33, trunkF: 0.10 },
-    { n: 'Fiat Punto',      L: 4.06, W: 1.68, H: 1.49, hb: 0.30, hood: 0.78, trunkH: 0.74, windF: 0.58, roofF: 0.65, roofR: 0.25, trunkF: 0.05 },
-    { n: 'Fiat Tipo',       L: 4.57, W: 1.79, H: 1.50, hb: 0.30, hood: 0.80, trunkH: 0.77, windF: 0.60, roofF: 0.67, roofR: 0.23, trunkF: 0.04 },
-    { n: 'Nissan Qashqai',  L: 4.42, W: 1.84, H: 1.63, hb: 0.36, hood: 0.92, trunkH: 0.88, windF: 0.55, roofF: 0.62, roofR: 0.24, trunkF: 0.04 },
-    { n: 'Nissan Micra',    L: 3.80, W: 1.66, H: 1.45, hb: 0.30, hood: 0.78, trunkH: 0.72, windF: 0.61, roofF: 0.68, roofR: 0.31, trunkF: 0.08 },
-    { n: 'Nissan Juke',     L: 4.21, W: 1.80, H: 1.59, hb: 0.34, hood: 0.88, trunkH: 0.84, windF: 0.58, roofF: 0.65, roofR: 0.26, trunkF: 0.06 },
-    { n: 'Lancia Ypsilon',  L: 3.84, W: 1.68, H: 1.52, hb: 0.30, hood: 0.80, trunkH: 0.79, windF: 0.62, roofF: 0.70, roofR: 0.31, trunkF: 0.09 },
-    { n: 'Fiat Ducato',     L: 5.41, W: 2.05, H: 2.42, hb: 0.42, hood: 1.06, trunkH: 1.02, windF: 0.30, roofF: 0.36, roofR: 0.05, trunkF: 0.02 }
+    { n: 'Fiat Panda',     L: 3.653, W: 1.643, H: 1.551, wb: 2.300, sill: 0.30, hoodH: 0.86, roofH: 1.52, roofIn: 0.30, roofOut: 0.66, windBase: 0.74, trunkH: 0.95, nose: 0.90 },
+    { n: 'Fiat 500',       L: 3.546, W: 1.627, H: 1.488, wb: 2.300, sill: 0.29, hoodH: 0.84, roofH: 1.46, roofIn: 0.32, roofOut: 0.70, windBase: 0.78, trunkH: 0.90, nose: 0.86 },
+    { n: 'Fiat Punto',     L: 4.065, W: 1.686, H: 1.490, wb: 2.510, sill: 0.29, hoodH: 0.82, roofH: 1.45, roofIn: 0.26, roofOut: 0.64, windBase: 0.76, trunkH: 0.92, nose: 0.88 },
+    { n: 'Fiat Tipo',      L: 4.571, W: 1.792, H: 1.497, wb: 2.638, sill: 0.29, hoodH: 0.84, roofH: 1.46, roofIn: 0.24, roofOut: 0.62, windBase: 0.74, trunkH: 0.94, nose: 0.90 },
+    { n: 'Nissan Qashqai', L: 4.394, W: 1.806, H: 1.590, wb: 2.646, sill: 0.35, hoodH: 0.98, roofH: 1.55, roofIn: 0.24, roofOut: 0.62, windBase: 0.72, trunkH: 1.06, nose: 0.94 },
+    { n: 'Nissan Micra',   L: 3.999, W: 1.743, H: 1.452, wb: 2.525, sill: 0.29, hoodH: 0.82, roofH: 1.41, roofIn: 0.28, roofOut: 0.66, windBase: 0.76, trunkH: 0.90, nose: 0.86 },
+    { n: 'Nissan Juke',    L: 4.135, W: 1.765, H: 1.565, wb: 2.530, sill: 0.33, hoodH: 0.94, roofH: 1.52, roofIn: 0.26, roofOut: 0.64, windBase: 0.74, trunkH: 1.00, nose: 0.92 },
+    { n: 'Lancia Ypsilon', L: 3.842, W: 1.675, H: 1.518, wb: 2.390, sill: 0.29, hoodH: 0.84, roofH: 1.48, roofIn: 0.32, roofOut: 0.70, windBase: 0.78, trunkH: 1.00, nose: 0.86 },
+    { n: 'Fiat Ducato',    L: 5.413, W: 2.050, H: 2.524, wb: 3.450, sill: 0.40, hoodH: 1.12, roofH: 2.46, roofIn: 0.06, roofOut: 0.34, windBase: 0.46, trunkH: 2.40, nose: 1.04 }
   ];
   function chaikin(pts, it) {
     for (var k = 0; k < it; k++) {
@@ -1177,64 +1177,126 @@
     }
     return pts;
   }
-  function carModelGeo(s) {
-    var L = s.L, W = s.W, H = s.H, hb = s.hb;
-    var raw = [[-L / 2, hb], [L / 2, hb], [L / 2, s.hood * 0.92], [L / 2 - 0.06, s.hood],
-               [-L / 2 + s.windF * L, s.hood], [-L / 2 + s.roofF * L, H], [-L / 2 + s.roofR * L, H],
-               [-L / 2 + s.trunkF * L, s.trunkH], [-L / 2, s.trunkH * 0.96]];
-    var P = chaikin(raw, 2);
-    var sh = new THREE.Shape(); sh.moveTo(P[0][0], P[0][1]);
-    for (var i = 1; i < P.length; i++) sh.lineTo(P[i][0], P[i][1]);
-    sh.closePath();
-    var body = new THREE.ExtrudeGeometry(sh, { depth: Math.max(0.4, W - 0.14), bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.07, bevelSegments: 3, curveSegments: 6 });
-    body.translate(0, 0, -Math.max(0.4, W - 0.14) / 2); body.rotateY(-Math.PI / 2); body.computeVertexNormals();
-    colorize(body, 0xffffff);
-    var parts = [body];
-    /* passaruota scuri: danno l'incavo sopra la ruota */
-    var archG = new THREE.CylinderGeometry(0.44, 0.44, 0.24, 12, 1, false, 0, Math.PI); archG.rotateX(Math.PI / 2);
-    var txw = W / 2 - 0.06, ax = [L * 0.31, -L * 0.31];
+  function smoothArr(k, keys) {
+    /* interpolazione morbida sui punti di controllo: keys = [[t, v], ...] con t in 0..1 */
+    var i = 0;
+    while (i < keys.length - 2 && k > keys[i + 1][0]) i++;
+    var a = keys[i], b = keys[i + 1], t = (k - a[0]) / Math.max(1e-6, b[0] - a[0]);
+    t = Math.max(0, Math.min(1, t));
+    t = t * t * (3 - 2 * t);
+    return a[1] + (b[1] - a[1]) * t;
+  }
+  function carModelGeo(sp) {
+    var L = sp.L, W = sp.W, H = sp.H, hw = W / 2;
+    var S = 26, R = 18;
+    var roofTop = sp.roofH;
+    var topKeys = [[0.00, sp.trunkH * 0.86], [0.06, sp.trunkH], [sp.roofIn * 0.75, sp.trunkH + 0.06],
+                   [sp.roofIn, roofTop], [sp.roofOut, roofTop], [sp.windBase, sp.hoodH + 0.02],
+                   [0.93, sp.hoodH], [1.00, sp.hoodH * sp.nose]];
+    var widKeys = [[0.00, 0.80], [0.05, 0.92], [0.14, 0.985], [0.50, 1.00], [0.86, 0.985], [0.95, 0.94], [1.00, 0.86]];
+    var pos = [], col = [], idx = [], ring = [];
+    var cabinIn = -L / 2 + sp.roofIn * L - 0.25, cabinOut = -L / 2 + sp.windBase * L;
+    var glassLow = sp.hoodH + 0.34 * (roofTop - sp.hoodH);
+    for (var si = 0; si <= S; si++) {
+      var k = si / S, z = -L / 2 + L * k;
+      var top = smoothArr(k, topKeys), bot = sp.sill + 0.02 * Math.sin(k * Math.PI);
+      var wf = smoothArr(k, widKeys);
+      var cy = (top + bot) / 2, hh = (top - bot) / 2;
+      var nExp = 3.4 + 1.6 * Math.sin(k * Math.PI);   /* spigoli piu' vivi a muso e coda */
+      ring = [];
+      for (var ri = 0; ri < R; ri++) {
+        var th = (ri / R) * Math.PI * 2;
+        var ct = Math.cos(th), st = Math.sin(th);
+        var sx = Math.sign(ct) * Math.pow(Math.abs(ct), 2 / nExp);
+        var sy = Math.sign(st) * Math.pow(Math.abs(st), 2 / nExp);
+        var y = cy + hh * sy;
+        var tumble = 1 - 0.20 * Math.max(0, (y - glassLow) / Math.max(0.05, roofTop - glassLow));
+        var x = hw * wf * sx * tumble;
+        pos.push(x, y, z);
+        var isGlass = (y > glassLow && z > cabinIn && z < cabinOut && Math.abs(sx) > 0.72);
+        var isRoof = y > roofTop - 0.055;
+        if (isRoof) col.push(1, 1, 1);
+        else if (isGlass) col.push(0.055, 0.075, 0.105);
+        else col.push(1, 1, 1);
+        ring.push(si * R + ri);
+      }
+    }
+    for (var a = 0; a < S; a++) for (var b = 0; b < R; b++) {
+      var b2 = (b + 1) % R;
+      var p0 = a * R + b, p1 = a * R + b2, p2 = (a + 1) * R + b2, p3 = (a + 1) * R + b;
+      idx.push(p0, p1, p2, p0, p2, p3);
+    }
+    /* chiude muso e coda con un ventaglio sul centro della sezione */
+    [0, S].forEach(function (ringIdx) {
+      var cx0 = 0, cy0 = 0, cz0 = 0;
+      for (var q = 0; q < R; q++) {
+        var vi = (ringIdx * R + q) * 3;
+        cx0 += pos[vi]; cy0 += pos[vi + 1]; cz0 += pos[vi + 2];
+      }
+      cx0 /= R; cy0 /= R; cz0 /= R;
+      var centerIdx = pos.length / 3;
+      pos.push(cx0, cy0, cz0);
+      var darkCap = (ringIdx === 0) ? 0 : 0;
+      col.push(1, 1, 1);
+      for (var q2 = 0; q2 < R; q2++) {
+        var a1 = ringIdx * R + q2, b1 = ringIdx * R + ((q2 + 1) % R);
+        if (ringIdx === 0) idx.push(centerIdx, b1, a1);
+        else idx.push(centerIdx, a1, b1);
+      }
+    });
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    var parts = [g];
+    /* fondo scuro, paraurti e passaruota */
+    var under = new THREE.BoxGeometry(W * 0.96, 0.10, L * 0.92);
+    under.translate(0, sp.sill - 0.01, 0); colorize(under, 0x0a0b0e); parts.push(under);
+    var bmpF = new THREE.BoxGeometry(W * 0.94, sp.hoodH * 0.42, 0.16);
+    bmpF.translate(0, sp.sill + sp.hoodH * 0.30, L / 2 - 0.05); colorize(bmpF, 0x14161a); parts.push(bmpF);
+    var bmpR = new THREE.BoxGeometry(W * 0.94, sp.trunkH * 0.34, 0.16);
+    bmpR.translate(0, sp.sill + sp.trunkH * 0.26, -L / 2 + 0.05); colorize(bmpR, 0x14161a); parts.push(bmpR);
+    var archG = new THREE.CylinderGeometry(0.45, 0.45, 0.18, 14, 1, false, 0, Math.PI); archG.rotateX(Math.PI / 2);
+    var axle = sp.wb / 2, wx = W / 2 - 0.02;
     for (var axI = 0; axI < 2; axI++) for (var sgA = -1; sgA <= 1; sgA += 2) {
-      var ar = archG.clone(); ar.rotateY(Math.PI / 2); ar.translate(sgA * txw, 0.59, ax[axI]);
+      var ar = archG.clone(); ar.rotateY(Math.PI / 2); ar.translate(sgA * wx, 0.62, axI ? axle : -axle);
       colorize(ar, 0x0a0b0e); parts.push(ar);
     }
-    /* vetri: parabrezza inclinato + fasce laterali */
-    var zR = -L / 2 + s.roofR * L, zF = -L / 2 + s.roofF * L;
-    var glass = new THREE.BoxGeometry(W - 0.02, Math.max(0.26, (H - s.hood) * 0.50), Math.max(0.55, zF - zR));
-    glass.translate(0, s.hood + (H - s.hood) * 0.58, (zR + zF) / 2);
-    colorize(glass, 0x070d15); parts.push(glass);
-    var wsH = H - s.hood, wsLen = Math.max(0.5, (s.windF - s.roofR) * L * 0.42);
-    var ws = new THREE.BoxGeometry(W - 0.16, 0.05, wsLen);
-    ws.rotateX(-0.62); ws.translate(0, s.hood + wsH * 0.52, zF - wsLen * 0.35);
-    colorize(ws, 0x0b1220); parts.push(ws);
-    /* specchietti */
-    var mg = new THREE.BoxGeometry(0.20, 0.09, 0.10);
-    [[-1, 1], [1, 1]].forEach(function (sg) {
-      var m = mg.clone(); m.translate(sg[0] * (W / 2 + 0.02), s.hood + 0.20, zF - 0.25);
-      colorize(m, 0x181b20); parts.push(m);
+    /* specchietti, calandra, targa */
+    var mg = new THREE.BoxGeometry(0.19, 0.085, 0.10);
+    var zMir = -L / 2 + (sp.windBase - 0.09) * L;
+    [[-1], [1]].forEach(function (sg) {
+      var m = mg.clone(); m.translate(sg[0] * (W / 2 + 0.02), sp.hoodH + 0.16, zMir);
+      colorize(m, 0x171a1f); parts.push(m);
     });
-    /* calandra e targa */
-    var gg = new THREE.BoxGeometry(W * 0.52, s.hood * 0.26, 0.06);
-    gg.translate(0, s.hood * 0.45, L / 2 + 0.01); colorize(gg, 0x0d0f13); parts.push(gg);
-    var plate = new THREE.BoxGeometry(0.46, 0.11, 0.03);
-    var pf = plate.clone(); pf.translate(0, hb + 0.16, L / 2 + 0.04); colorize(pf, 0xd8d8cc); parts.push(pf);
-    var pr = plate.clone(); pr.translate(0, hb + 0.16, -L / 2 - 0.04); colorize(pr, 0xd8d8cc); parts.push(pr);
-    /* ruote con cerchio chiaro */
-    var tyre = new THREE.CylinderGeometry(0.325, 0.325, 0.21, 14); tyre.rotateZ(Math.PI / 2);
-    var rim = new THREE.CylinderGeometry(0.185, 0.185, 0.225, 10); rim.rotateZ(Math.PI / 2);
-    for (var a = 0; a < 2; a++) for (var sg = -1; sg <= 1; sg += 2) {
-      var t = tyre.clone(); t.translate(sg * (W / 2 - 0.10), 0.325, ax[a]); colorize(t, 0x0a0b0d); parts.push(t);
-      var rr = rim.clone(); rr.translate(sg * (W / 2 - 0.085), 0.325, ax[a]); colorize(rr, 0xb9bec6); parts.push(rr);
+    var grille = new THREE.BoxGeometry(W * 0.50, sp.hoodH * 0.30, 0.07);
+    grille.translate(0, sp.hoodH * 0.42, L / 2 - 0.02); colorize(grille, 0x0c0e12); parts.push(grille);
+    var plateG = new THREE.BoxGeometry(0.45, 0.10, 0.03);
+    var pf = plateG.clone(); pf.translate(0, sp.sill + 0.14, L / 2 + 0.02); colorize(pf, 0xd6d6c8); parts.push(pf);
+    var pr = plateG.clone(); pr.translate(0, sp.sill + 0.14, -L / 2 - 0.02); colorize(pr, 0xd6d6c8); parts.push(pr);
+    /* ruote: 205/55 su cerchi da 16", misura reale delle compatte */
+    var tyre = new THREE.CylinderGeometry(0.33, 0.33, 0.215, 16); tyre.rotateZ(Math.PI / 2);
+    var rimG = new THREE.CylinderGeometry(0.195, 0.195, 0.23, 12); rimG.rotateZ(Math.PI / 2);
+    var spoke = new THREE.BoxGeometry(0.235, 0.30, 0.055);
+    for (var ax2 = 0; ax2 < 2; ax2++) for (var sg2 = -1; sg2 <= 1; sg2 += 2) {
+      var zax = ax2 ? axle : -axle;
+      var t = tyre.clone(); t.translate(sg2 * (W / 2 - 0.09), 0.33, zax); colorize(t, 0x0a0b0d); parts.push(t);
+      var rg = rimG.clone(); rg.translate(sg2 * (W / 2 - 0.075), 0.33, zax); colorize(rg, 0x9aa0a8); parts.push(rg);
+      for (var spk = 0; spk < 5; spk++) {
+        var s2 = spoke.clone(); s2.rotateX(spk * Math.PI / 5);
+        s2.translate(sg2 * (W / 2 - 0.055), 0.33, zax); colorize(s2, 0xbfc5cc); parts.push(s2);
+      }
     }
-    var lp = [], hx = W / 2 - 0.28, hz = L / 2 + 0.02, tz = -L / 2 - 0.02;
-    var hl = new THREE.BoxGeometry(0.40, 0.13, 0.10);
-    [[-hx, s.hood * 0.74, hz], [hx, s.hood * 0.74, hz]].forEach(function (p) {
-      var g = hl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xfff4d6); lp.push(g);
+    var lp = [], hx = W / 2 - 0.30, hz = L / 2 - 0.06, tz = -L / 2 + 0.05;
+    var hl = new THREE.BoxGeometry(0.38, 0.12, 0.07);
+    [[-hx], [hx]].forEach(function (q) {
+      var g2 = hl.clone(); g2.translate(q[0], sp.hoodH * 0.70, hz); colorize(g2, 0xfff4d6); lp.push(g2);
     });
-    var strip = new THREE.BoxGeometry(W * 0.34, 0.035, 0.10);
-    var drl = strip.clone(); drl.translate(0, s.hood * 0.74, hz); colorize(drl, 0xa8c4e0); lp.push(drl);
-    var tl = new THREE.BoxGeometry(0.34, 0.12, 0.08);
-    [[-hx, s.trunkH * 0.82, tz], [hx, s.trunkH * 0.82, tz]].forEach(function (p) {
-      var g = tl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xff2416); lp.push(g);
+    var drl = new THREE.BoxGeometry(W * 0.30, 0.03, 0.07); drl.translate(0, sp.hoodH * 0.70, hz);
+    colorize(drl, 0xa8c4e0); lp.push(drl);
+    var tl = new THREE.BoxGeometry(0.32, 0.11, 0.06);
+    [[-hx], [hx]].forEach(function (q) {
+      var g3 = tl.clone(); g3.translate(q[0], sp.trunkH * 0.78, tz); colorize(g3, 0xff2416); lp.push(g3);
     });
     return { body: mergeColored(parts), lamp: mergeColored(lp) };
   }
