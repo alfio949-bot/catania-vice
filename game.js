@@ -34,14 +34,14 @@
   var canvas = document.getElementById('game');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: 'high-performance' });
   var QUALITY = (location.search.match(/q=(\d)/) || [0, 0])[1] | 0; /* 0 auto, 1 bassa, 2 media, 3 alta/4K */
-  var dprMax = QUALITY === 3 ? 3 : (QUALITY === 1 ? 1 : 2);
+  var dprMax = QUALITY === 3 ? 2 : (QUALITY === 1 ? 1 : 1.5);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprMax));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.18;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   var scene = new THREE.Scene();
   var NIGHT = 0x0a1020;
@@ -78,11 +78,23 @@
   var sun = new THREE.DirectionalLight(0x9fb4e0, 0.42);
   sun.position.set(-180, 320, 140);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(QUALITY === 3 ? 3072 : 1024, QUALITY === 3 ? 3072 : 1024);
-  sun.shadow.camera.left = -140; sun.shadow.camera.right = 140; sun.shadow.camera.top = 140; sun.shadow.camera.bottom = -140;
-  sun.shadow.camera.near = 1; sun.shadow.camera.far = 900;
+  sun.shadow.mapSize.set(QUALITY === 3 ? 2048 : 1024, QUALITY === 3 ? 2048 : 1024);
+  sun.shadow.camera.left = -95; sun.shadow.camera.right = 95; sun.shadow.camera.top = 95; sun.shadow.camera.bottom = -95;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 620;
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.5;
   scene.add(sun); scene.add(sun.target);
+  sun.shadow.autoUpdate = false; sun.shadow.needsUpdate = true;
+  /* l'ombra segue il giocatore invece di coprire tutta Catania */
+  var shTick = 0;
+  function shadowTick() {
+    shTick++;
+    var sx = P.x - 120, sz = P.z + 100;
+    if (Math.abs(sun.position.x - sx) > 3 || Math.abs(sun.position.z - sz) > 3) {
+      sun.position.set(sx, 220, sz);
+      sun.target.position.set(P.x, 0, P.z); sun.target.updateMatrixWorld();
+    }
+    if (shTick % 5 === 0) sun.shadow.needsUpdate = true;
+  }
   var fill = new THREE.DirectionalLight(0xffa860, 0.22); fill.position.set(120, 80, -180); scene.add(fill);
   var fill2 = new THREE.DirectionalLight(0x587099, 0.09); fill2.position.set(-160, 60, -60); scene.add(fill2);
 
@@ -547,8 +559,8 @@
     detClut = new THREE.InstancedMesh(g1, clutMat, 8000);
     detSlab.castShadow = false; detSlab.receiveShadow = true;
     detRail.castShadow = false; detRail.receiveShadow = true;
-    detCorn.castShadow = true; detCorn.receiveShadow = true;
-    detClut.castShadow = true; detClut.receiveShadow = true;
+    detCorn.castShadow = false; detCorn.receiveShadow = true;
+    detClut.castShadow = false; detClut.receiveShadow = true;
     detSlab.frustumCulled = false; detRail.frustumCulled = false;
     detCorn.frustumCulled = false; detClut.frustumCulled = false;
     detSlab.count = 0; detRail.count = 0; detCorn.count = 0; detClut.count = 0;
@@ -674,27 +686,40 @@
   var dummyM = new THREE.Matrix4(), dq = new THREE.Quaternion(), dp = new THREE.Vector3(), ds = new THREE.Vector3(), up0 = new THREE.Vector3(0, 1, 0), cc0 = new THREE.Color();
   var buckets = [[], [], []];
   for (var bi = 0; bi < NB; bi++) { var B0 = BLD[bi]; if (B0.hid) continue; var sz = (B0.w + B0.h) / 2; buckets[sz < 15 ? 0 : (sz < 30 ? 1 : 2)].push(bi); }
+  /* la citta e divisa in celle: cosi il culling scarta davvero cio che e fuori inquadratura */
+  var CELL = 400, CELL_R = CELL * 0.78;
+  function cellOf(x, z) { return (Math.floor(x / CELL) + 500) * 1000 + (Math.floor(z / CELL) + 500); }
   for (var bk2 = 0; bk2 < 3; bk2++) {
-    var idxs = buckets[bk2];
-    for (var mm2 = 0; mm2 < 3; mm2++) {
-      var sub = idxs.filter(function (v, i) { return i % 3 === mm2; });
-      if (!sub.length) continue;
-      var im = new THREE.InstancedMesh(wallGeo, wallMatsByBucket[bk2][mm2], sub.length);
-      im.castShadow = true; im.receiveShadow = true;
+    var idxs = buckets[bk2], cells = {};
+    for (var ci = 0; ci < idxs.length; ci++) {
+      var ic = idxs[ci], bc = BLD[ic], kk = cellOf(bc.x, bc.z);
+      (cells[kk] = cells[kk] || []).push(ic);
+    }
+    var keys = Object.keys(cells);
+    for (var ki = 0; ki < keys.length; ki++) {
+      var sub = cells[keys[ki]];
+      var cx = Math.floor(BLD[sub[0]].x / CELL) * CELL + CELL / 2;
+      var cz = Math.floor(BLD[sub[0]].z / CELL) * CELL + CELL / 2;
+      var wg = wallGeo.clone();
+      wg.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 12, cz), CELL_R);
+      var im = new THREE.InstancedMesh(wg, wallMatsByBucket[bk2][ki % 3], sub.length);
+      im.castShadow = false; im.receiveShadow = true;
       for (var s2 = 0; s2 < sub.length; s2++) {
         var Bd = BLD[sub[s2]];
         dq.setFromAxisAngle(up0, -Bd.a); dp.set(Bd.x, 0, Bd.z); ds.set(Bd.w, Bd.hh, Bd.h);
         dummyM.compose(dp, dq, ds); im.setMatrixAt(s2, dummyM);
       }
       im.instanceMatrix.needsUpdate = true; scene.add(im);
+      var rg = roofGeo.clone();
+      rg.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 12, cz), CELL_R);
+      var ri = new THREE.InstancedMesh(rg, roofMat, sub.length);
+      for (var s3 = 0; s3 < sub.length; s3++) {
+        var Br = BLD[sub[s3]];
+        dq.setFromAxisAngle(up0, -Br.a); dp.set(Br.x, Br.hh + 0.05, Br.z); ds.set(Br.w + 0.4, 1, Br.h + 0.4);
+        dummyM.compose(dp, dq, ds); ri.setMatrixAt(s3, dummyM);
+      }
+      ri.instanceMatrix.needsUpdate = true; scene.add(ri);
     }
-    var ri = new THREE.InstancedMesh(roofGeo, roofMat, idxs.length);
-    for (var s3 = 0; s3 < idxs.length; s3++) {
-      var Br = BLD[idxs[s3]];
-      dq.setFromAxisAngle(up0, -Br.a); dp.set(Br.x, Br.hh + 0.05, Br.z); ds.set(Br.w + 0.4, 1, Br.h + 0.4);
-      dummyM.compose(dp, dq, ds); ri.setMatrixAt(s3, dummyM);
-    }
-    ri.instanceMatrix.needsUpdate = true; scene.add(ri);
   }
 
   /* ================= MONUMENTI: geometria fatta a mano =================
@@ -973,7 +998,7 @@
   if (THREE.EffectComposer && QUALITY !== 1) {
     var rtSize = new THREE.Vector2(window.innerWidth, window.innerHeight);
     composer = new THREE.EffectComposer(renderer);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY === 3 ? 2 : 1.5));
+    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     composer.addPass(new THREE.RenderPass(scene, camera));
     bloom = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2), 0.9, 0.75, 0.68);
     composer.addPass(bloom);
@@ -1702,7 +1727,7 @@
     { fpsT += dt; fpsN++; if (fpsT > 1) { lastFps = Math.round(fpsN / fpsT); if (location.search.indexOf('fps') >= 0) document.title = 'FPS ' + lastFps; fpsT = 0; fpsN = 0; } }
     readPad();
     if (state.autoDrive) { touch.gas = 1; touch.ax = 0.02; }
-    if (state.running && !state.paused) { update(dt); perfCheck(dt); }
+    if (state.running && !state.paused) { update(dt); shadowTick(); perfCheck(dt); }
     if (composer) composer.render(); else renderer.render(scene, camera);
     if (STATS) statsTick();
     requestAnimationFrame(loop);
