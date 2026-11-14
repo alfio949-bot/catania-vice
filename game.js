@@ -570,7 +570,7 @@
         var B = BLD[bi];
         var dx = B.x - px, dz = B.z - pz;
         if (dx * dx + dz * dz > DET_R * DET_R) continue;
-        if (B.w < 5 || B.h < 5 || B.hh < 5) continue;
+        if (B.hid || B.w < 5 || B.h < 5 || B.hh < 5) continue;
         var ca = Math.cos(B.a), sa = Math.sin(B.a);
         _q1.setFromAxisAngle(UPY, -B.a);
         var ax = B.w, az = B.h;
@@ -673,7 +673,7 @@
   var roofMat = new THREE.MeshStandardMaterial({ color: 0x2a2624, roughness: 0.95 });
   var dummyM = new THREE.Matrix4(), dq = new THREE.Quaternion(), dp = new THREE.Vector3(), ds = new THREE.Vector3(), up0 = new THREE.Vector3(0, 1, 0), cc0 = new THREE.Color();
   var buckets = [[], [], []];
-  for (var bi = 0; bi < NB; bi++) { var B0 = BLD[bi], sz = (B0.w + B0.h) / 2; buckets[sz < 15 ? 0 : (sz < 30 ? 1 : 2)].push(bi); }
+  for (var bi = 0; bi < NB; bi++) { var B0 = BLD[bi]; if (B0.hid) continue; var sz = (B0.w + B0.h) / 2; buckets[sz < 15 ? 0 : (sz < 30 ? 1 : 2)].push(bi); }
   for (var bk2 = 0; bk2 < 3; bk2++) {
     var idxs = buckets[bk2];
     for (var mm2 = 0; mm2 < 3; mm2++) {
@@ -696,6 +696,189 @@
     }
     ri.instanceMatrix.needsUpdate = true; scene.add(ri);
   }
+
+  /* ================= MONUMENTI: geometria fatta a mano =================
+     Posizioni e impronte reali da OpenStreetMap (georeferenziate), forma
+     costruita per tipo: duomo, chiesa, teatro, palazzo, castello, porta,
+     fontana, anfiteatro. Sostituiscono il blocco generico nello stesso punto. */
+  var MON = (typeof window !== 'undefined' && window.MONUMENTS) ? window.MONUMENTS : [];
+  (function () {
+    if (!MON.length) return;
+    var i, j;
+    /* 1. nascondi i palazzi generici che stanno dentro un monumento */
+    for (i = 0; i < NB; i++) {
+      var B = BLD[i];
+      for (j = 0; j < MON.length; j++) {
+        var M = MON[j];
+        if (M.k === 'parco') continue;
+        if (Math.abs(B.x - M.x) > M.w * 0.5 + 14 || Math.abs(B.z - M.z) > M.h * 0.5 + 14) continue;
+        var ca0 = Math.cos(M.a), sa0 = Math.sin(M.a);
+        var dx = B.x - M.x, dz = B.z - M.z;
+        var u = dx * ca0 + dz * sa0, v = -dx * sa0 + dz * ca0;
+        if (Math.abs(u) < M.w * 0.5 + 1.5 && Math.abs(v) < M.h * 0.5 + 1.5) { B.hid = 1; break; }
+      }
+    }
+
+    /* 2. attrezzi */
+    var stone = [], dark = [];
+    function push(list, g, lx, ly, lz, ry) {
+      if (ry) g.rotateY(ry);
+      g.translate(lx, ly, lz);
+      list.push(g);
+    }
+    function bx(list, w, h, d, lx, ly, lz, ry) { push(list, new THREE.BoxGeometry(w, h, d), lx, ly, lz, ry || 0); }
+    function cyl(list, rt, rb, h, seg, lx, ly, lz, ry) { push(list, new THREE.CylinderGeometry(rt, rb, h, seg), lx, ly, lz, ry || 0); }
+    function dome(list, r, lx, ly, lz, sy) {
+      var g = new THREE.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+      if (sy) g.scale(1, sy, 1);
+      push(list, g, lx, ly, lz, 0);
+    }
+    function pediment(list, w, d, h, lx, ly, lz) {
+      /* timpano: scalini decrescenti, si legge come frontone triangolare */
+      var steps = 4;
+      for (var s = 0; s < steps; s++) {
+        var f = 1 - s / steps;
+        bx(list, w * (1 - 0.16 * s), h / steps, d * (1 - 0.22 * s), lx, ly + h / steps * (s + 0.5), lz);
+      }
+    }
+    function cross(list, lx, ly, lz) {
+      bx(list, 0.5, 1.7, 0.5, lx, ly + 0.85, lz);
+      bx(list, 1.15, 0.45, 0.45, lx, ly + 1.15, lz);
+    }
+
+    /* 3. un tipo di monumento per volta */
+    for (i = 0; i < MON.length; i++) {
+      var m = MON[i], w = m.w, d = m.h, hh = m.hh, k = m.k;
+      var SL = [], DL = [];
+      if (k === 'parco') continue;
+      if (k === 'chiesa' || k === 'duomo') {
+        var big = k === 'duomo';
+        var nave = w * (big ? 0.8 : 0.84);
+        bx(SL, nave, hh, d * 0.9, 0, hh / 2, -d * 0.03);
+        /* facciata */
+        bx(SL, nave + 1.6, hh * 1.03, 2.0, 0, hh * 0.515, d * 0.46);
+        for (var c = 0; c < (big ? 6 : 4); c++) {
+          var px = (c / ((big ? 6 : 4) - 1) - 0.5) * (nave - 2.4);
+          bx(SL, 1.1, hh * 0.92, 1.0, px, hh * 0.46, d * 0.46 + 1.3);
+        }
+        pediment(SL, nave + 1.4, 2.6, big ? 5.2 : 3.6, 0, hh * 1.03, d * 0.46);
+        bx(SL, nave + 2.6, 0.9, 3.4, 0, hh * 1.02, d * 0.46);
+        /* campanile */
+        var tw = big ? 5.2 : 4.4;
+        var tx = nave / 2 - tw / 2 + 1.4, tz = -d / 2 + tw / 2 + 0.6;
+        bx(SL, tw, hh * (big ? 1.02 : 0.86), tw, tx, hh * (big ? 0.51 : 0.43), tz);
+        bx(SL, tw + 1.0, 0.8, tw + 1.0, tx, hh * (big ? 1.06 : 0.9), tz);
+        /* cella campanaria aperta + cupolino */
+        bx(SL, tw * 0.9, tw * 0.85, 0.5, tx, hh * (big ? 1.06 : 0.9) + tw * 0.42, tz + tw / 2 - 0.2);
+        cyl(SL, tw * 0.52, tw * 0.62, tw * 0.7, 10, tx, hh * (big ? 1.06 : 0.9) + tw * 0.9, tz);
+        dome(SL, tw * 0.55, tx, hh * (big ? 1.06 : 0.9) + tw * 1.24, tz);
+        cross(SL, tx, hh * (big ? 1.06 : 0.9) + tw * 1.55, tz);
+        /* cupola centrale */
+        var dr = Math.min(nave, d * 0.9) * 0.3;
+        cyl(SL, dr, dr * 1.05, 2.6, 14, 0, hh - 0.4, -d * 0.05);
+        dome(SL, dr, 0, hh + 0.9, -d * 0.05, 1.15);
+        cyl(DL, 0.6, 0.6, 1.6, 8, 0, hh + 0.9 + dr * 1.1, -d * 0.05);
+        /* gradini */
+        bx(SL, nave + 4, 0.45, 3.2, 0, 0.22, d * 0.46 + 2.4);
+        bx(SL, nave + 5.4, 0.45, 2.0, 0, 0.22, d * 0.46 + 4.4);
+        /* portale in basalto */
+        bx(DL, 3.4, hh * 0.3, 0.7, 0, hh * 0.15, d * 0.46 + 1.05);
+      } else if (k === 'teatro') {
+        bx(SL, w, hh, d * 0.86, 0, hh / 2, -d * 0.06);
+        bx(SL, w + 1.2, 1.2, d * 0.9, 0, hh * 0.99, -d * 0.06);
+        var cols = 6, cw = w / (cols + 1);
+        for (var q = 0; q < cols; q++) {
+          var cxp = (q + 1) * cw - w / 2;
+          cyl(SL, 1.15, 1.3, hh * 0.62, 12, cxp, hh * 0.31, d * 0.44);
+        }
+        bx(SL, w + 2.0, 1.5, 2.6, 0, hh * 0.66, d * 0.44);
+        bx(SL, w * 0.62, 3.0, 2.4, 0, hh * 0.72, d * 0.44);
+        pediment(SL, w * 0.6, 2.6, 2.6, 0, hh * 0.74, d * 0.44);
+        dome(SL, Math.min(w, d) * 0.26, 0, hh - 1.0, -d * 0.06, 0.8);
+        bx(DL, 3.6, hh * 0.42, 0.6, 0, hh * 0.21, d * 0.44 + 0.2);
+      } else if (k === 'castello') {
+        bx(SL, w, hh, d, 0, hh / 2, 0);
+        bx(SL, w + 1.6, 1.4, d + 1.6, 0, hh + 0.4, 0);
+        var corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+        for (var ci = 0; ci < 4; ci++) {
+          var cx2 = corners[ci][0] * (w / 2 - 2.5), cz2 = corners[ci][1] * (d / 2 - 2.5);
+          cyl(SL, 4.4, 4.8, hh * 1.16, 14, cx2, hh * 0.58, cz2);
+          cyl(SL, 4.9, 4.9, 0.8, 14, cx2, hh * 1.16, cz2);
+        }
+        for (var bt = 0; bt < 14; bt++) {
+          var ang = bt / 14 * Math.PI * 2;
+          bx(SL, 1.7, 1.5, 1.7, Math.cos(ang) * (w / 2 + 0.4), hh + 1.4, Math.sin(ang) * (d / 2 + 0.4));
+        }
+      } else if (k === 'porta') {
+        var pw = w;
+        bx(SL, 4.6, hh, 4.6, -pw / 2 + 2.3, hh / 2, 0);
+        bx(SL, 4.6, hh, 4.6, pw / 2 - 2.3, hh / 2, 0);
+        bx(SL, pw, 4.2, 4.8, 0, hh - 2.1, 0);
+        bx(SL, pw + 2.4, 1.2, 5.4, 0, hh + 0.6, 0);
+        pediment(SL, pw * 0.8, 3.0, 2.4, 0, hh + 1.2, 0);
+        bx(DL, pw - 9.2, hh - 4.2, 3.4, 0, (hh - 4.2) / 2, 0);
+      } else if (k === 'fontana') {
+        cyl(SL, w * 0.42, w * 0.46, 1.3, 20, 0, 0.65, 0);
+        cyl(SL, w * 0.3, w * 0.32, 1.1, 16, 0, 1.9, 0);
+        bx(SL, w * 0.34, 1.5, d * 0.34, 0, 3.2, 0);
+        cyl(SL, 1.5, 1.7, 7.0, 4, 0, 7.4, 0, Math.PI / 4);
+        bx(DL, 0.9, 1.1, 0.9, 0, 11.4, 0);
+      } else if (k === 'anfiteatro') {
+        for (var rr = 0; rr < 4; rr++) {
+          var rad = w * (0.5 - rr * 0.1);
+          var g2 = new THREE.CylinderGeometry(rad, rad, 2.6, 26, 1, true);
+          g2.scale(1, 1, (d / w) * 0.9);
+          push(SL, g2, 0, 1.3 + rr * 2.6, 0, 0);
+        }
+      } else {
+        /* palazzo */
+        bx(SL, w, hh, d, 0, hh / 2, 0);
+        bx(SL, w + 1.4, 1.1, d + 1.4, 0, hh * 0.995, 0);
+        bx(SL, w + 0.5, 1.3, d + 0.5, 0, hh + 1.2, 0);
+        bx(SL, w + 0.9, 0.35, d + 0.9, 0, hh * 0.66, 0);
+        bx(SL, w + 0.9, 0.3, d + 0.9, 0, hh * 0.33, 0);
+        bx(SL, Math.min(9, w * 0.4), 3.6, Math.min(9, d * 0.4), 0, hh + 3.2, 0);
+        bx(DL, 3.4, 5.2, 0.8, 0, 2.6, d / 2 + 0.25);
+        bx(DL, 1.5, 2.2, 0.6, -w * 0.2, 4.6, d / 2 + 0.3);
+        bx(DL, 1.5, 2.2, 0.6, w * 0.2, 4.6, d / 2 + 0.3);
+      }
+      for (var z1 = 0; z1 < SL.length; z1++) { SL[z1].rotateY(-m.a); SL[z1].translate(m.x, 0, m.z); stone.push(SL[z1]); }
+      for (var z2 = 0; z2 < DL.length; z2++) { DL[z2].rotateY(-m.a); DL[z2].translate(m.x, 0, m.z); dark.push(DL[z2]); }
+    }
+
+    /* 4. unisci tutto in due mesh: pietra e basalto */
+    var sc = mkCanvas(256, 256), sx = sc.getContext('2d');
+    sx.fillStyle = '#cfc7b8'; sx.fillRect(0, 0, 256, 256);
+    for (var row = 0; row < 8; row++) {
+      var yy = row * 32;
+      for (var col = 0; col < 4; col++) {
+        var off = (row % 2) * 32;
+        var g = 198 + ((row * 37 + col * 61) % 26);
+        sx.fillStyle = 'rgb(' + (g + 8) + ',' + (g + 2) + ',' + (g - 10) + ')';
+        sx.fillRect(col * 64 + off - 64, yy + 1, 62, 30);
+      }
+      sx.fillStyle = 'rgba(70,64,58,0.5)';
+      sx.fillRect(0, yy, 256, 1.6);
+    }
+    for (var nz = 0; nz < 2600; nz++) {
+      var nx = (nz * 7919) % 256, ny = ((nz * 104729) >> 3) % 256;
+      sx.fillStyle = 'rgba(255,255,255,' + (0.02 + (nz % 7) * 0.006) + ')';
+      sx.fillRect(nx, ny, 2, 1);
+    }
+    var stoneTex = mkTex(sc, 3, 3);
+    var stoneMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: stoneTex, roughness: 0.82, metalness: 0.03, envMapIntensity: 0.4 });
+    var darkMat = new THREE.MeshStandardMaterial({ color: 0x24211f, roughness: 0.7, metalness: 0.1, envMapIntensity: 0.3 });
+    function build(list, mat, shadow) {
+      if (!list.length) return;
+      var g = mergeGeos(list);
+      g.computeVertexNormals();
+      var mesh = new THREE.Mesh(g, mat);
+      mesh.castShadow = shadow; mesh.receiveShadow = true;
+      scene.add(mesh);
+    }
+    build(stone, stoneMat, true);
+    build(dark, darkMat, false);
+  })();
 
   /* ---- lampioni caldi + insegne neon ---- */
   var lampList = lamps.filter(function (p2, i) { return i % 2 === 0 && isFree(p2[0], p2[1], 0.5); }).slice(0, 900);
