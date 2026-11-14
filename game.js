@@ -1103,6 +1103,77 @@
     mat.customProgramCacheKey = function () { return 'ic'; };
     return mat;
   }
+
+  /* ---------- auto vere: sagome riconoscibili delle vetture che stanno in strada a Catania ---------- */
+  function colorize(g, hex) {
+    var c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+    for (var i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g;
+  }
+  function mergeColored(list) {
+    var pos = [], nor = [], uv = [], col = [], idx = [], off = 0;
+    list.forEach(function (g) {
+      var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv, c = g.attributes.color;
+      for (var k = 0; k < p.count; k++) {
+        pos.push(p.getX(k), p.getY(k), p.getZ(k));
+        if (n) nor.push(n.getX(k), n.getY(k), n.getZ(k)); else nor.push(0, 1, 0);
+        if (u) uv.push(u.getX(k), u.getY(k)); else uv.push(0, 0);
+        if (c) col.push(c.getX(k), c.getY(k), c.getZ(k)); else col.push(1, 1, 1);
+      }
+      if (g.index) { for (var k2 = 0; k2 < g.index.count; k2++) idx.push(g.index.getX(k2) + off); }
+      else { for (var k3 = 0; k3 < p.count; k3++) idx.push(k3 + off); }
+      off += p.count;
+    });
+    var out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    out.setIndex(idx); return out;
+  }
+  var CAR_MODELS = [
+    { n: 'Fiat Panda',      L: 3.65, W: 1.64, H: 1.55, hb: 0.32, hood: 0.84, trunkH: 0.80, windF: 0.60, roofF: 0.67, roofR: 0.29, trunkF: 0.06 },
+    { n: 'Fiat 500',        L: 3.55, W: 1.63, H: 1.49, hb: 0.30, hood: 0.80, trunkH: 0.74, windF: 0.62, roofF: 0.71, roofR: 0.33, trunkF: 0.10 },
+    { n: 'Fiat Punto',      L: 4.06, W: 1.68, H: 1.49, hb: 0.30, hood: 0.78, trunkH: 0.74, windF: 0.58, roofF: 0.65, roofR: 0.25, trunkF: 0.05 },
+    { n: 'Fiat Tipo',       L: 4.57, W: 1.79, H: 1.50, hb: 0.30, hood: 0.80, trunkH: 0.77, windF: 0.60, roofF: 0.67, roofR: 0.23, trunkF: 0.04 },
+    { n: 'Nissan Qashqai',  L: 4.42, W: 1.84, H: 1.63, hb: 0.36, hood: 0.92, trunkH: 0.88, windF: 0.55, roofF: 0.62, roofR: 0.24, trunkF: 0.04 },
+    { n: 'Nissan Micra',    L: 3.80, W: 1.66, H: 1.45, hb: 0.30, hood: 0.78, trunkH: 0.72, windF: 0.61, roofF: 0.68, roofR: 0.31, trunkF: 0.08 },
+    { n: 'Nissan Juke',     L: 4.21, W: 1.80, H: 1.59, hb: 0.34, hood: 0.88, trunkH: 0.84, windF: 0.58, roofF: 0.65, roofR: 0.26, trunkF: 0.06 },
+    { n: 'Lancia Ypsilon',  L: 3.84, W: 1.68, H: 1.52, hb: 0.30, hood: 0.80, trunkH: 0.79, windF: 0.62, roofF: 0.70, roofR: 0.31, trunkF: 0.09 },
+    { n: 'Fiat Ducato',     L: 5.41, W: 2.05, H: 2.42, hb: 0.42, hood: 1.06, trunkH: 1.02, windF: 0.30, roofF: 0.36, roofR: 0.05, trunkF: 0.02 }
+  ];
+  function carModelGeo(s) {
+    var L = s.L, W = s.W, H = s.H, hb = s.hb;
+    var P = [[-L / 2, hb], [L / 2, hb], [L / 2, s.hood], [-L / 2 + s.windF * L, s.hood],
+             [-L / 2 + s.roofF * L, H], [-L / 2 + s.roofR * L, H],
+             [-L / 2 + s.trunkF * L, s.trunkH], [-L / 2, s.trunkH]];
+    var sh = new THREE.Shape(); sh.moveTo(P[0][0], P[0][1]);
+    for (var i = 1; i < P.length; i++) sh.lineTo(P[i][0], P[i][1]);
+    sh.closePath();
+    var body = new THREE.ExtrudeGeometry(sh, { depth: W, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1, curveSegments: 3 });
+    body.translate(0, 0, -W / 2); body.rotateY(-Math.PI / 2); body.computeVertexNormals();
+    colorize(body, 0xffffff);
+    var zR = -L / 2 + s.roofR * L, zF = -L / 2 + s.roofF * L;
+    var glass = new THREE.BoxGeometry(W + 0.015, Math.max(0.28, (H - s.hood) * 0.52), Math.max(0.6, zF - zR));
+    glass.translate(0, s.hood + (H - s.hood) * 0.60, (zR + zF) / 2);
+    colorize(glass, 0x0a1018);
+    var parts = [body, glass];
+    var wg = new THREE.CylinderGeometry(0.315, 0.315, 0.20, 10); wg.rotateZ(Math.PI / 2);
+    var tx = W / 2 - 0.10, ax = [L * 0.31, -L * 0.31];
+    for (var a = 0; a < 2; a++) for (var sg = -1; sg <= 1; sg += 2) {
+      var w = wg.clone(); w.translate(sg * tx, 0.315, ax[a]); colorize(w, 0x0c0d10); parts.push(w);
+    }
+    var lp = [], hx = W / 2 - 0.30, hz = L / 2 + 0.055, tz = -L / 2 - 0.055;
+    var hl = new THREE.BoxGeometry(0.34, 0.15, 0.05);
+    [[-hx, s.hood * 0.80, hz], [hx, s.hood * 0.80, hz]].forEach(function (p) {
+      var g = hl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xfff1cc); lp.push(g);
+    });
+    var tl = new THREE.BoxGeometry(0.30, 0.14, 0.05);
+    [[-hx, s.trunkH * 0.86, tz], [hx, s.trunkH * 0.86, tz]].forEach(function (p) {
+      var g = tl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xff2416); lp.push(g);
+    });
+    return { body: mergeColored(parts), lamp: mergeColored(lp) };
+  }
   var traffic = null, peds = null, carColors = [0xb8352f, 0x2c3e70, 0xd9d5cc, 0x1c1d21, 0x6d7278, 0x3d6b52, 0x8c6a2f, 0x8f2b45, 0x37607a, 0xa8a196];
   function lineLens(L) {
     var segs = [], total = 0;
@@ -1138,44 +1209,32 @@
       }
       return best;
     }
-    var N = 38;
-    var bodyGeo = carBodyGeo();
-    var wg = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 10); wg.rotateZ(Math.PI / 2);
-    var wp = [];
-    [[-0.9, 1.3], [0.9, 1.3], [-0.9, -1.34], [0.9, -1.34]].forEach(function (p) {
-      var w = wg.clone(); w.translate(p[0], 0.35, p[1]); wp.push(w);
-    });
-    var wheelGeo = mergeGeos(wp);
-    var hl = new THREE.BoxGeometry(0.36, 0.17, 0.09); hl.translate(0, 0.72, 2.08);
-    var h2 = hl.clone(); h2.translate(-0.62, 0, 0);
-    var h3 = hl.clone(); h3.translate(0.62, 0, 0);
-    var headGeo = mergeGeos([h2, h3]);
-    var tl = new THREE.BoxGeometry(0.34, 0.15, 0.09); tl.translate(0, 0.74, -2.08);
-    var t2 = tl.clone(); t2.translate(-0.62, 0, 0);
-    var t3 = tl.clone(); t3.translate(0.62, 0, 0);
-    var tailGeo = mergeGeos([t2, t3]);
-    var bodyMat = instColorMat(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.28, metalness: 0.72, envMapIntensity: 1.6 }));
-    var wheelMat = new THREE.MeshStandardMaterial({ color: 0x101114, roughness: 0.85 });
-    var headMat = new THREE.MeshBasicMaterial({ color: 0xfff2d2, toneMapped: false });
-    var tailMat = new THREE.MeshBasicMaterial({ color: 0xff2a26, toneMapped: false });
-    var body = new THREE.InstancedMesh(bodyGeo, bodyMat, N); body.castShadow = true;
-    var wheel = new THREE.InstancedMesh(wheelGeo, wheelMat, N);
-    var head = new THREE.InstancedMesh(headGeo, headMat, N);
-    var tail = new THREE.InstancedMesh(tailGeo, tailMat, N);
-    body.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    wheel.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    head.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    tail.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    var cc = new THREE.Color(), start = { x: 560, z: 850 };
-    var cars = [];
-    for (var j = 0; j < N; j++) {
-      var c = pick(start);
-      cars.push({ line: c.L, ln: c.ln, s: Math.random() * c.ln.total, sp: 7 + Math.random() * 6, lane: 1.4 + Math.random() * 0.7, x: 0, z: 0, ang: 0 });
-      cc.setHex(carColors[j % carColors.length]); body.setColorAt(j, cc);
+    var N = 38, counts = [6, 5, 5, 4, 4, 4, 4, 3, 3];
+    var bodyMat = instColorMat(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.34, metalness: 0.58, envMapIntensity: 1.5 }));
+    var lampMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    var parts = [], geoCache = [];
+    for (var mi = 0; mi < CAR_MODELS.length; mi++) {
+      var gg = carModelGeo(CAR_MODELS[mi]);
+      geoCache.push(gg);
+      var bm = new THREE.InstancedMesh(gg.body, bodyMat, counts[mi]);
+      var lm = new THREE.InstancedMesh(gg.lamp, lampMat, counts[mi]);
+      bm.instanceMatrix.setUsage(THREE.DynamicDrawUsage); lm.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      bm.castShadow = true;
+      scene.add(bm); scene.add(lm);
+      parts.push({ body: bm, lamp: lm });
     }
-    if (body.instanceColor) body.instanceColor.needsUpdate = true;
-    scene.add(body); scene.add(wheel); scene.add(head); scene.add(tail);
-    traffic = { cars: cars, body: body, wheel: wheel, head: head, tail: tail, pick: pick };
+    var cars = [], cc = new THREE.Color(), start = { x: 560, z: 850 }, used = [];
+    for (var mi2 = 0; mi2 < counts.length; mi2++) used.push(0);
+    for (var j = 0; j < N; j++) {
+      var mdl = j % CAR_MODELS.length;
+      var slot = used[mdl]++;
+      var c = pick(start);
+      cars.push({ model: mdl, mi: slot, line: c.L, ln: c.ln, s: Math.random() * c.ln.total, sp: 7 + Math.random() * 6, lane: 1.4 + Math.random() * 0.7, x: 0, z: 0, ang: 0 });
+      cc.setHex(carColors[j % carColors.length]);
+      parts[mdl].body.setColorAt(slot, cc);
+    }
+    for (var mi3 = 0; mi3 < parts.length; mi3++) if (parts[mi3].body.instanceColor) parts[mi3].body.instanceColor.needsUpdate = true;
+    traffic = { cars: cars, parts: parts, pick: pick };
   })();
   function updateTraffic(dt) {
     if (!traffic) return;
@@ -1190,10 +1249,13 @@
       c.x = px; c.z = pz; c.ang = ang;
       q.setFromAxisAngle(up, ang); p.set(px, 0, pz);
       m.compose(p, q, one);
-      T.body.setMatrixAt(i, m); T.wheel.setMatrixAt(i, m); T.head.setMatrixAt(i, m); T.tail.setMatrixAt(i, m);
+      var pk = T.parts[c.model];
+      pk.body.setMatrixAt(c.mi, m); pk.lamp.setMatrixAt(c.mi, m);
     }
-    T.body.instanceMatrix.needsUpdate = true; T.wheel.instanceMatrix.needsUpdate = true;
-    T.head.instanceMatrix.needsUpdate = true; T.tail.instanceMatrix.needsUpdate = true;
+    for (var pi = 0; pi < T.parts.length; pi++) {
+      T.parts[pi].body.instanceMatrix.needsUpdate = true;
+      T.parts[pi].lamp.instanceMatrix.needsUpdate = true;
+    }
   }
   (function buildPeds() {
     var cands = [];
