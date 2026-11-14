@@ -43,6 +43,29 @@
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
 
+
+  /* riflessi veri: piccola mappa ambiente notturna (neon + bagliore dell'Etna) */
+  (function buildEnvMap() {
+    try {
+      var cve = document.createElement('canvas'); cve.width = 256; cve.height = 128;
+      var cx = cve.getContext('2d');
+      var gr = cx.createLinearGradient(0, 0, 0, 128);
+      gr.addColorStop(0.00, '#04060c'); gr.addColorStop(0.50, '#0a1120');
+      gr.addColorStop(0.68, '#1d1a22'); gr.addColorStop(0.76, '#5c2a12');
+      gr.addColorStop(0.82, '#8a3c14'); gr.addColorStop(1.00, '#100e10');
+      cx.fillStyle = gr; cx.fillRect(0, 0, 256, 128);
+      [[36, 92, '#ff4a22'], [104, 96, '#ffb03a'], [168, 90, '#ff2a6a'], [226, 95, '#3aa0ff']].forEach(function (sp) {
+        var rg = cx.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], 20);
+        rg.addColorStop(0, sp[2]); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        cx.fillStyle = rg; cx.fillRect(sp[0] - 22, sp[1] - 22, 44, 44);
+      });
+      var tex = new THREE.CanvasTexture(cve);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      var pm = new THREE.PMREMGenerator(renderer); pm.compileEquirectangularShader();
+      scene.environment = pm.fromEquirectangular(tex).texture;
+      tex.dispose(); pm.dispose();
+    } catch (e) { }
+  })();
   var scene = new THREE.Scene();
   var NIGHT = 0x0a1020;
   scene.background = new THREE.Color(NIGHT);
@@ -1142,34 +1165,75 @@
     { n: 'Lancia Ypsilon',  L: 3.84, W: 1.68, H: 1.52, hb: 0.30, hood: 0.80, trunkH: 0.79, windF: 0.62, roofF: 0.70, roofR: 0.31, trunkF: 0.09 },
     { n: 'Fiat Ducato',     L: 5.41, W: 2.05, H: 2.42, hb: 0.42, hood: 1.06, trunkH: 1.02, windF: 0.30, roofF: 0.36, roofR: 0.05, trunkF: 0.02 }
   ];
+  function chaikin(pts, it) {
+    for (var k = 0; k < it; k++) {
+      var out = [];
+      for (var i = 0; i < pts.length; i++) {
+        var a = pts[i], b = pts[(i + 1) % pts.length];
+        out.push([a[0] * 0.76 + b[0] * 0.24, a[1] * 0.76 + b[1] * 0.24]);
+        out.push([a[0] * 0.24 + b[0] * 0.76, a[1] * 0.24 + b[1] * 0.76]);
+      }
+      pts = out;
+    }
+    return pts;
+  }
   function carModelGeo(s) {
     var L = s.L, W = s.W, H = s.H, hb = s.hb;
-    var P = [[-L / 2, hb], [L / 2, hb], [L / 2, s.hood], [-L / 2 + s.windF * L, s.hood],
-             [-L / 2 + s.roofF * L, H], [-L / 2 + s.roofR * L, H],
-             [-L / 2 + s.trunkF * L, s.trunkH], [-L / 2, s.trunkH]];
+    var raw = [[-L / 2, hb], [L / 2, hb], [L / 2, s.hood * 0.92], [L / 2 - 0.06, s.hood],
+               [-L / 2 + s.windF * L, s.hood], [-L / 2 + s.roofF * L, H], [-L / 2 + s.roofR * L, H],
+               [-L / 2 + s.trunkF * L, s.trunkH], [-L / 2, s.trunkH * 0.96]];
+    var P = chaikin(raw, 2);
     var sh = new THREE.Shape(); sh.moveTo(P[0][0], P[0][1]);
     for (var i = 1; i < P.length; i++) sh.lineTo(P[i][0], P[i][1]);
     sh.closePath();
-    var body = new THREE.ExtrudeGeometry(sh, { depth: W, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 1, curveSegments: 3 });
-    body.translate(0, 0, -W / 2); body.rotateY(-Math.PI / 2); body.computeVertexNormals();
+    var body = new THREE.ExtrudeGeometry(sh, { depth: Math.max(0.4, W - 0.14), bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.07, bevelSegments: 3, curveSegments: 6 });
+    body.translate(0, 0, -Math.max(0.4, W - 0.14) / 2); body.rotateY(-Math.PI / 2); body.computeVertexNormals();
     colorize(body, 0xffffff);
-    var zR = -L / 2 + s.roofR * L, zF = -L / 2 + s.roofF * L;
-    var glass = new THREE.BoxGeometry(W + 0.015, Math.max(0.28, (H - s.hood) * 0.52), Math.max(0.6, zF - zR));
-    glass.translate(0, s.hood + (H - s.hood) * 0.60, (zR + zF) / 2);
-    colorize(glass, 0x0a1018);
-    var parts = [body, glass];
-    var wg = new THREE.CylinderGeometry(0.315, 0.315, 0.20, 10); wg.rotateZ(Math.PI / 2);
-    var tx = W / 2 - 0.10, ax = [L * 0.31, -L * 0.31];
-    for (var a = 0; a < 2; a++) for (var sg = -1; sg <= 1; sg += 2) {
-      var w = wg.clone(); w.translate(sg * tx, 0.315, ax[a]); colorize(w, 0x0c0d10); parts.push(w);
+    var parts = [body];
+    /* passaruota scuri: danno l'incavo sopra la ruota */
+    var archG = new THREE.CylinderGeometry(0.44, 0.44, 0.24, 12, 1, false, 0, Math.PI); archG.rotateX(Math.PI / 2);
+    var txw = W / 2 - 0.06, ax = [L * 0.31, -L * 0.31];
+    for (var axI = 0; axI < 2; axI++) for (var sgA = -1; sgA <= 1; sgA += 2) {
+      var ar = archG.clone(); ar.rotateY(Math.PI / 2); ar.translate(sgA * txw, 0.59, ax[axI]);
+      colorize(ar, 0x0a0b0e); parts.push(ar);
     }
-    var lp = [], hx = W / 2 - 0.30, hz = L / 2 + 0.055, tz = -L / 2 - 0.055;
-    var hl = new THREE.BoxGeometry(0.34, 0.15, 0.05);
-    [[-hx, s.hood * 0.80, hz], [hx, s.hood * 0.80, hz]].forEach(function (p) {
-      var g = hl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xfff1cc); lp.push(g);
+    /* vetri: parabrezza inclinato + fasce laterali */
+    var zR = -L / 2 + s.roofR * L, zF = -L / 2 + s.roofF * L;
+    var glass = new THREE.BoxGeometry(W - 0.02, Math.max(0.26, (H - s.hood) * 0.50), Math.max(0.55, zF - zR));
+    glass.translate(0, s.hood + (H - s.hood) * 0.58, (zR + zF) / 2);
+    colorize(glass, 0x070d15); parts.push(glass);
+    var wsH = H - s.hood, wsLen = Math.max(0.5, (s.windF - s.roofR) * L * 0.42);
+    var ws = new THREE.BoxGeometry(W - 0.16, 0.05, wsLen);
+    ws.rotateX(-0.62); ws.translate(0, s.hood + wsH * 0.52, zF - wsLen * 0.35);
+    colorize(ws, 0x0b1220); parts.push(ws);
+    /* specchietti */
+    var mg = new THREE.BoxGeometry(0.20, 0.09, 0.10);
+    [[-1, 1], [1, 1]].forEach(function (sg) {
+      var m = mg.clone(); m.translate(sg[0] * (W / 2 + 0.02), s.hood + 0.20, zF - 0.25);
+      colorize(m, 0x181b20); parts.push(m);
     });
-    var tl = new THREE.BoxGeometry(0.30, 0.14, 0.05);
-    [[-hx, s.trunkH * 0.86, tz], [hx, s.trunkH * 0.86, tz]].forEach(function (p) {
+    /* calandra e targa */
+    var gg = new THREE.BoxGeometry(W * 0.52, s.hood * 0.26, 0.06);
+    gg.translate(0, s.hood * 0.45, L / 2 + 0.01); colorize(gg, 0x0d0f13); parts.push(gg);
+    var plate = new THREE.BoxGeometry(0.46, 0.11, 0.03);
+    var pf = plate.clone(); pf.translate(0, hb + 0.16, L / 2 + 0.04); colorize(pf, 0xd8d8cc); parts.push(pf);
+    var pr = plate.clone(); pr.translate(0, hb + 0.16, -L / 2 - 0.04); colorize(pr, 0xd8d8cc); parts.push(pr);
+    /* ruote con cerchio chiaro */
+    var tyre = new THREE.CylinderGeometry(0.325, 0.325, 0.21, 14); tyre.rotateZ(Math.PI / 2);
+    var rim = new THREE.CylinderGeometry(0.185, 0.185, 0.225, 10); rim.rotateZ(Math.PI / 2);
+    for (var a = 0; a < 2; a++) for (var sg = -1; sg <= 1; sg += 2) {
+      var t = tyre.clone(); t.translate(sg * (W / 2 - 0.10), 0.325, ax[a]); colorize(t, 0x0a0b0d); parts.push(t);
+      var rr = rim.clone(); rr.translate(sg * (W / 2 - 0.085), 0.325, ax[a]); colorize(rr, 0xb9bec6); parts.push(rr);
+    }
+    var lp = [], hx = W / 2 - 0.28, hz = L / 2 + 0.02, tz = -L / 2 - 0.02;
+    var hl = new THREE.BoxGeometry(0.40, 0.13, 0.10);
+    [[-hx, s.hood * 0.74, hz], [hx, s.hood * 0.74, hz]].forEach(function (p) {
+      var g = hl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xfff4d6); lp.push(g);
+    });
+    var strip = new THREE.BoxGeometry(W * 0.34, 0.035, 0.10);
+    var drl = strip.clone(); drl.translate(0, s.hood * 0.74, hz); colorize(drl, 0xa8c4e0); lp.push(drl);
+    var tl = new THREE.BoxGeometry(0.34, 0.12, 0.08);
+    [[-hx, s.trunkH * 0.82, tz], [hx, s.trunkH * 0.82, tz]].forEach(function (p) {
       var g = tl.clone(); g.translate(p[0], p[1], p[2]); colorize(g, 0xff2416); lp.push(g);
     });
     return { body: mergeColored(parts), lamp: mergeColored(lp) };
